@@ -1,0 +1,185 @@
+{% extends 'admin/base.html' %}
+
+{% block head_css %}
+{{ super() }}
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+    /* Global Theme Overrides */
+    body {
+        background-color: #2b3337 !important;
+        color: #b2e2c5 !important;
+        font-family: 'Fira Code', monospace !important;
+        padding-left: 260px;
+        /* Offset for sidebar */
+    }
+
+    /* Verify if this hides specific elements correctly */
+    .navbar {
+        display: none !important;
+        /* Hide default top navbar */
+    }
+
+    /* Custom Sidebar */
+    .custom-sidebar {
+        height: 100vh;
+        width: 260px;
+        position: fixed;
+        top: 0;
+        left: 0;
+        background-color: #1e2426;
+        border-right: 2px solid #8fdac2;
+        overflow-y: auto;
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .sidebar-header {
+        padding: 20px;
+        border-bottom: 2px solid #8fdac2;
+        background: #171c1e;
+    }
+
+    .sidebar-brand {
+        color: #9ee3b1;
+        font-weight: bold;
+        font-size: 1.2rem;
+        text-decoration: none;
+    }
+
+    .sidebar-menu {
+        flex: 1;
+        padding-top: 20px;
+    }
+
+    .sidebar-link {
+        display: block;
+        padding: 12px 25px;
+        color: #b2e2c5;
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+
+    .sidebar-link:hover {
+        background-color: #2b3337;
+        color: #c1ffd2;
+        text-decoration: none;
+        padding-left: 30px;
+        /* Slide effect */
+        border-left: 4px solid #8fdac2;
+    }
+
+    .sidebar-link.active {
+        background-color: #2b3337;
+        color: #fff;
+        border-left: 4px solid #8fdac2;
+    }
+
+    .sidebar-footer {
+        padding: 20px;
+        font-size: 0.8em;
+        color: #6b8b85;
+        border-top: 1px solid #2b3337;
+    }
+
+    /* Content Area Fixes */
+    /* Flask-Admin wraps content in .container usually. We need to make sure it fills the space */
+    .container {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 20px 40px !important;
+        margin: 0 !important;
+    }
+
+    /* Tables & Cards Styling from before */
+    .table {
+        color: #b2e2c5 !important;
+    }
+
+    .table thead th {
+        border-bottom: 2px solid #8fdac2;
+        color: #9ee3b1;
+    }
+
+    .table td,
+    .table th {
+        border-top: 1px solid #4a5a5f;
+    }
+
+    .table-hover tbody tr:hover {
+        background-color: #364044 !important;
+    }
+
+    .card,
+    .jumbotron {
+        background-color: #364044 !important;
+        border: 1px solid #4a5a5f;
+        color: #b2e2c5;
+    }
+
+    .card-header {
+        background-color: #1e2426 !important;
+        border-bottom: 1px solid #4a5a5f;
+        color: #9ee3b1;
+    }
+
+    .form-control {
+        background-color: #2b3337 !important;
+        border: 1px solid #8fdac2 !important;
+        color: #b2e2c5 !important;
+    }
+
+    .btn-primary {
+        background-color: #8fdac2 !important;
+        border-color: #8fdac2 !important;
+        color: #2b3337 !important;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block page_body %}
+<!-- Sidebar HTML -->
+<div class="custom-sidebar">
+    <div class="sidebar-header">
+        <a href="{{ admin_view.admin.url }}" class="sidebar-brand">Dipendra's<br>Dashboard</a>
+    </div>
+
+    <div class="sidebar-menu">
+        <a href="{{ admin_view.admin.url }}" class="sidebar-link">Dashboard Home</a>
+
+        {% for item in admin_view.admin.menu() %}
+        {% if item.is_accessible() and item.is_visible() %}
+        {% if item.children %}
+        <!-- Dropdowns could go here, keeping it simple for now -->
+        <div class="sidebar-link" style="color: #6b8b85; cursor: default;">{{ item.name }}</div>
+        {% for child in item.children %}
+        <a href="{{ child.get_url() }}" class="sidebar-link" style="padding-left: 40px;">- {{ child.name }}</a>
+        {% endfor %}
+        {% else %}
+        <a href="{{ item.get_url() }}" class="sidebar-link {% if item.is_active(admin_view) %}active{% endif %}">
+            {{ item.name }}
+        </a>
+        {% endif %}
+        {% endif %}
+        {% endfor %}
+
+        <div style="margin-top: auto; padding-bottom: 20px;">
+            <a href="{{ url_for('logout') }}" class="sidebar-link"
+                style="color: #ff6b6b !important; border-top: 1px solid #2b3337; padding-top: 20px;">
+                <span class="fa fa-sign-out"></span> Logout
+            </a>
+        </div>
+    </div>
+
+    <div class="sidebar-footer">
+        &copy; 2026 Dipendra Y.
+    </div>
+</div>
+
+<!-- Main Content Injection -->
+<div class="admin-content-wrapper">
+    {{ super() }}
+</div>
+{% endblock %}

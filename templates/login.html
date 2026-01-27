@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #2b3337;
+            color: #b2e2c5;
+            font-family: 'Fira Code', monospace;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .login-box {
+            background-color: #364044;
+            padding: 40px;
+            border: 1px solid #4a5a5f;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .form-control {
+            background-color: #2b3337;
+            border: 1px solid #8fdac2;
+            color: #b2e2c5;
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            /* Fix width padding issue */
+            border-radius: 4px;
+            font-family: inherit;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #c1ffd2;
+            box-shadow: 0 0 0 2px rgba(143, 218, 194, 0.2);
+        }
+
+        .btn-primary {
+            background-color: #8fdac2;
+            border: none;
+            color: #2b3337;
+            font-weight: bold;
+            width: 100%;
+            padding: 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 16px;
+            transition: background 0.2s;
+        }
+
+        .btn-primary:hover {
+            background-color: #9ee3b1;
+        }
+
+        h2 {
+            margin-top: 0;
+            margin-bottom: 30px;
+            text-align: center;
+            color: #9ee3b1;
+        }
+
+        .alert {
+            background-color: #ff6b6b;
+            color: white;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="login-box">
+        <h2>Admin Login</h2>
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-danger">{{ message }}</div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <form method="POST">
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" name="username" class="form-control" required autofocus>
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" name="password" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Login</button>
+        </form>
+    </div>
+</body>
+
+</html>
