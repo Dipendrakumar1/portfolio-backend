@@ -1,3 +1,4 @@
+import os
 from flask import Flask, jsonify, abort, render_template, redirect, url_for, request, flash
 from flask_admin import Admin, AdminIndexView, expose
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
@@ -28,7 +29,14 @@ def load_user(user_id):
     return User.objects(pk=user_id).first()
 
 db.init_app(app)
-CORS(app, origins=["http://localhost:5173"])
+
+# CORS configuration: Allow localhost for dev and optional FRONTEND_URL from environment
+allowed_origins = ["http://localhost:5173"]
+frontend_url = os.getenv("FRONTEND_URL")
+if frontend_url:
+    allowed_origins.append(frontend_url)
+
+CORS(app, origins=allowed_origins)
 
 try:
     # Attempt to access the database to verify connection
@@ -299,4 +307,6 @@ def api_blog_detail(slug):
 # --------------------------------------------------------------------
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    # In production, Render will provide a PORT environment variable
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)
