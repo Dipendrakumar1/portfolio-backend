@@ -31,12 +31,7 @@ def load_user(user_id):
 db.init_app(app)
 
 # CORS configuration: Allow localhost for dev and optional FRONTEND_URL from environment
-allowed_origins = ["http://localhost:5173"]
-frontend_url = os.getenv("FRONTEND_URL")
-if frontend_url:
-    allowed_origins.append(frontend_url)
-
-CORS(app, origins=allowed_origins)
+CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 try:
     # Attempt to access the database to verify connection
