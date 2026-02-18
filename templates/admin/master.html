@@ -143,19 +143,25 @@
 <!-- Sidebar HTML -->
 <div class="custom-sidebar">
     <div class="sidebar-header">
-        <a href="{{ admin_view.admin.url }}" class="sidebar-brand">Dipendra's<br>Dashboard</a>
+        <a href="{{ url_for('admin.index') }}" class="sidebar-brand">Dipendra's<br>Dashboard</a>
     </div>
 
     <div class="sidebar-menu">
-        <a href="{{ admin_view.admin.url }}" class="sidebar-link">Dashboard Home</a>
+        <a href="{{ url_for('admin.index') }}"
+            class="sidebar-link {% if admin_view == admin_view.admin.index_view %}active{% endif %}">Dashboard Home</a>
 
         {% for item in admin_view.admin.menu() %}
         {% if item.is_accessible() and item.is_visible() %}
-        {% if item.children %}
-        <!-- Dropdowns could go here, keeping it simple for now -->
-        <div class="sidebar-link" style="color: #6b8b85; cursor: default;">{{ item.name }}</div>
-        {% for child in item.children %}
-        <a href="{{ child.get_url() }}" class="sidebar-link" style="padding-left: 40px;">- {{ child.name }}</a>
+        {% set children = item.get_children() %}
+        {% if item.is_category() or children %}
+        <div class="sidebar-link"
+            style="color: #6b8b85; cursor: default; font-size: 0.9em; text-transform: uppercase; margin-top: 10px;">{{
+            item.name }}</div>
+        {% for child in children %}
+        {% if child.is_accessible() and child.is_visible() %}
+        <a href="{{ child.get_url() }}" class="sidebar-link {% if child.is_active(admin_view) %}active{% endif %}"
+            style="padding-left: 40px;">- {{ child.name }}</a>
+        {% endif %}
         {% endfor %}
         {% else %}
         <a href="{{ item.get_url() }}" class="sidebar-link {% if item.is_active(admin_view) %}active{% endif %}">
