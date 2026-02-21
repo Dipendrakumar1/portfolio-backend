@@ -1,11 +1,11 @@
-{% extends 'admin/master.html' %}
+﻿{% extends 'admin/master.html' %}
 
 {% block body %}
 <div class="container mt-4">
     <div class="jumbotron shadow-sm">
-        <h1 class="display-4">Welcome, Dipendra! 🚀</h1>
+        <h1 class="display-4">Welcome, Dipendra! ðŸš€</h1>
         <p class="lead">Manage your portfolio content, blogs, and diary entries from this control center.</p>
-        <hr class="my-4" style="border-color: #4a5a5f;">
+        <hr class="my-4" style="border-color: rgba(56, 189, 248, 0.2);">
         <p>Ready to update the world?</p>
         <a class="btn btn-primary btn-lg" href="http://localhost:5173" target="_blank" role="button">View Live
             Website</a>
@@ -16,14 +16,14 @@
         <div class="col-md-4">
             <div class="card mb-4 shadow-sm">
                 <div class="card-header">
-                    <strong style="font-size: 1.2em;">Projects</strong>
+                    Projects
                 </div>
                 <div class="card-body">
                     <p class="card-text">Showcase your latest work, GitHub repos, and experiments.</p>
                     <div class="d-flex justify-content-between">
                         <a href="{{ url_for('project.index_view') }}" class="btn btn-primary btn-sm">Manage All</a>
-                        <a href="{{ url_for('project.create_view') }}" class="btn btn-outline-light btn-sm"
-                            style="border-color: #8fdac2; color: #8fdac2;">+ Add New</a>
+                        <a href="{{ url_for('project.create_view') }}" class="btn btn-outline-light btn-sm">+ Add
+                            New</a>
                     </div>
                 </div>
             </div>
@@ -33,14 +33,13 @@
         <div class="col-md-4">
             <div class="card mb-4 shadow-sm">
                 <div class="card-header">
-                    <strong style="font-size: 1.2em;">Blogs</strong>
+                    Blogs
                 </div>
                 <div class="card-body">
                     <p class="card-text">Share your thoughts, tutorials, and technical deep-dives.</p>
                     <div class="d-flex justify-content-between">
                         <a href="{{ url_for('blog.index_view') }}" class="btn btn-primary btn-sm">Manage All</a>
-                        <a href="{{ url_for('blog.create_view') }}" class="btn btn-outline-light btn-sm"
-                            style="border-color: #8fdac2; color: #8fdac2;">+ Write New</a>
+                        <a href="{{ url_for('blog.create_view') }}" class="btn btn-outline-light btn-sm">+ Write New</a>
                     </div>
                 </div>
             </div>
@@ -50,14 +49,14 @@
         <div class="col-md-4">
             <div class="card mb-4 shadow-sm">
                 <div class="card-header">
-                    <strong style="font-size: 1.2em;">Diary</strong>
+                    Diary
                 </div>
                 <div class="card-body">
                     <p class="card-text">Record your daily progress, life updates, and notes.</p>
                     <div class="d-flex justify-content-between">
                         <a href="{{ url_for('diary.index_view') }}" class="btn btn-primary btn-sm">Manage All</a>
-                        <a href="{{ url_for('diary.create_view') }}" class="btn btn-outline-light btn-sm"
-                            style="border-color: #8fdac2; color: #8fdac2;">+ New Entry</a>
+                        <a href="{{ url_for('diary.create_view') }}" class="btn btn-outline-light btn-sm">+ New
+                            Entry</a>
                     </div>
                 </div>
             </div>
@@ -69,7 +68,7 @@
         <div class="col-md-6">
             <div class="card mb-4 shadow-sm">
                 <div class="card-header">
-                    <strong style="font-size: 1.2em;">Certificates</strong>
+                    Certificates
                 </div>
                 <div class="card-body">
                     <p class="card-text">Update your achievements and badges.</p>
@@ -83,7 +82,7 @@
         <div class="col-md-6">
             <div class="card mb-4 shadow-sm">
                 <div class="card-header">
-                    <strong style="font-size: 1.2em;">About Me</strong>
+                    About Me
                 </div>
                 <div class="card-body">
                     <p class="card-text">Edit your bio and profile information.</p>

@@ -10,7 +10,11 @@ from wtforms import TextAreaField
 from wtforms.widgets import TextArea
 
 from config import Config
-from models import db, Project, Diary, DiarySection, DiaryBullet, Certificate, About, Blog, HomeCard, User, Experience, Skill, Interest, Tool, Language, Achievement, ProjectsPage, BlogsPage, DiaryPage
+from models import db, Project, Diary, DiarySection, DiaryBullet, Certificate, About, Blog, HomeCard, User, Experience, Skill, Interest, Tool, Language, Achievement, ProjectsPage, BlogsPage, DiaryPage, VisitEvent
+from datetime import datetime, timedelta
+import pytz
+import markdown as md
+from flask_admin import BaseView
 
 # --------------------------------------------------------------------
 # App & config
@@ -23,6 +27,8 @@ app.config.from_object(Config)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
+login_manager.login_message = "Access Denied. Please login first."
+login_manager.login_message_category = "warning"
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -41,6 +47,13 @@ try:
 except Exception as e:
     print(f"db connection failed: {e}")
 
+@app.before_request
+def protect_admin():
+    if request.path.startswith('/admin') and not current_user.is_authenticated:
+        if request.endpoint != 'login' and request.path != '/login':
+            flash('Access Denied. Please login first.')
+            return redirect(url_for('login', next=request.url))
+
 # --------------------------------------------------------------------
 # Flask-Admin dashboard
 # --------------------------------------------------------------------
@@ -53,10 +66,18 @@ class MyAdminIndexView(AdminIndexView):
     def is_visible(self):
         return False
         
+    def is_accessible(self):
+        return current_user.is_authenticated
+
+    def inaccessible_callback(self, name, **kwargs):
+        flash('Access Denied. Please login first.', 'warning')
+        return redirect(url_for('login', next=request.url))
+
     @expose('/')
     def index(self):
         if not current_user.is_authenticated:
-            return redirect(url_for('login'))
+            flash('Access Denied. Please login first.')
+            return redirect(url_for('login', next=request.url))
         return super(MyAdminIndexView, self).index()
 
 class BaseModelView(ModelView):
@@ -65,6 +86,7 @@ class BaseModelView(ModelView):
 
     def inaccessible_callback(self, name, **kwargs):
         # redirect to login page if user doesn't have access
+        flash('Access Denied. Please login first.')
         return redirect(url_for('login', next=request.url))
 
     can_create = True
@@ -78,22 +100,34 @@ class BaseModelView(ModelView):
 class ProjectAdmin(BaseModelView):
     column_searchable_list = ("title", "slug", "short_description")
     column_filters = ("title",)
+    column_exclude_list = ("long_description",)
+    create_modal = False
+    edit_modal = False
     form_overrides = {
         "long_description": TextAreaField,
     }
     form_widget_args = {
-        "long_description": {"widget": RichTextArea()},
+        "long_description": {
+            "class": "easymde-editor",
+            "rows": 20,
+        },
     }
 
 class BlogAdmin(BaseModelView):
     column_searchable_list = ("title", "slug", "subtitle", "author")
     column_filters = ("author",)
     column_default_sort = ("published_at", True)
+    column_exclude_list = ("content",)
+    create_modal = False
+    edit_modal = False
     form_overrides = {
         "content": TextAreaField,
     }
     form_widget_args = {
-        "content": {"widget": RichTextArea()},
+        "content": {
+            "class": "easymde-editor",
+            "rows": 25,
+        },
     }
 
 class DiaryAdmin(BaseModelView):
@@ -109,8 +143,90 @@ class AboutAdmin(BaseModelView):
         "body": {"widget": RichTextArea()},
     }
 
+# --- Custom Analytics View ---
+class AnalyticsView(BaseView):
+    def is_accessible(self):
+        return current_user.is_authenticated
+
+    def inaccessible_callback(self, name, **kwargs):
+        flash('Access Denied. Please login first.')
+        return redirect(url_for('login', next=request.url))
+
+    @expose('/')
+    def index(self):
+
+        # Get total visits
+        total_visits_count = VisitEvent.objects.count()
+
+        # Get unique visitors (approximated by unique session IDs)
+        unique_sessions = VisitEvent.objects.distinct('session_id')
+        unique_visitors_count = len(unique_sessions)
+
+        # Get average scroll depth
+        pipeline_scroll = [
+            {"$group": {"_id": "$session_id", "max_scroll": {"$max": "$scroll_depth"}}},
+            {"$group": {"_id": None, "avg_scroll": {"$avg": "$max_scroll"}}}
+        ]
+        scroll_result = list(VisitEvent.objects.aggregate(*pipeline_scroll))
+        avg_scroll_depth = round(scroll_result[0]['avg_scroll'], 1) if scroll_result and scroll_result[0]['avg_scroll'] else 0
+
+        # Calculate dates for charts
+        today = datetime.now(pytz.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        # Daily visits (last 7 days by day)
+        daily_labels = []
+        daily_data = []
+        for i in range(6, -1, -1):
+            day_start = today - timedelta(days=i)
+            day_end = day_start + timedelta(days=1)
+            daily_labels.append(day_start.strftime("%b %d"))
+            daily_data.append(VisitEvent.objects(timestamp__gte=day_start, timestamp__lt=day_end).count())
+
+        # Monthly visits (last 6 months)
+        monthly_labels = []
+        monthly_data = []
+        for i in range(5, -1, -1):
+            # approximate 30 days per month
+            month_start = today - timedelta(days=30*i)
+            # get to first day of that month
+            month_start = month_start.replace(day=1)
+            if i == 0:
+                month_end = today + timedelta(days=32)
+                month_end = month_end.replace(day=1)
+            else:
+                month_end = today - timedelta(days=30*(i-1))
+                month_end = month_end.replace(day=1)
+            monthly_labels.append(month_start.strftime("%b %Y"))
+            monthly_data.append(VisitEvent.objects(timestamp__gte=month_start, timestamp__lt=month_end).count())
+
+        # Top pages
+        pipeline_pages = [
+            {"$group": {"_id": "$path", "views": {"$sum": 1}}},
+            {"$sort": {"views": -1}},
+            {"$limit": 10}
+        ]
+        top_pages = list(VisitEvent.objects.aggregate(*pipeline_pages))
+        top_pages_data = [{"path": p["_id"], "views": p["views"]} for p in top_pages]
+
+        return self.render('admin/analytics.html', 
+                           total_visits=total_visits_count,
+                           unique_visitors=unique_visitors_count,
+                           avg_scroll_depth=avg_scroll_depth,
+                           daily_labels=daily_labels,
+                           daily_data=daily_data,
+                           monthly_labels=monthly_labels,
+                           monthly_data=monthly_data,
+                           top_pages=top_pages_data)
+
+from flask_admin.menu import MenuLink
+
 # --- Admin Views with Categories ---
 admin = Admin(app, name="Portfolio Dashboard", template_mode="bootstrap4", index_view=MyAdminIndexView())
+
+# Add Logout Link
+admin.add_link(MenuLink(name='Logout', category='', url='/logout'))
+
+admin.add_view(AnalyticsView(name='Site Analytics', endpoint='analytics', category='General'))
 admin.add_view(AboutAdmin(About, name="Manage About Me", category="About Me"))
 admin.add_view(BaseModelView(Experience, name="Manage Experience", category="About Me"))
 admin.add_view(BaseModelView(Skill, name="Manage Skills", category="About Me"))
@@ -136,12 +252,16 @@ admin.add_view(BaseModelView(HomeCard, name="Manage Home Cards", category="Gener
 # --------------------------------------------------------------------
 
 def project_to_dict(p):
+    long_desc = p.long_description or ""
+    # Convert markdown to HTML if content doesn't already contain HTML tags
+    if long_desc and "<" not in long_desc:
+        long_desc = md.markdown(long_desc, extensions=["extra", "nl2br"])
     return {
         "id": str(p.id),
         "slug": p.slug,
         "title": p.title,
         "short_description": p.short_description,
-        "long_description": p.long_description,
+        "long_description": long_desc,
         "hero_image": p.hero_image,
         "repo_url": p.repo_url,
         "live_url": p.live_url,
@@ -205,6 +325,8 @@ def about_to_dict(a):
         "title": a.title,
         "body": a.body,
         "hero_image": a.hero_image,
+        "whatsapp": a.whatsapp,
+        "email": a.email,
         "skills": [skill_to_dict(s) for s in Skill.objects.order_by("order")],
         "interests": [interest_to_dict(i) for i in Interest.objects.order_by("order")],
         "tools": [tool_to_dict(t) for t in Tool.objects.order_by("order")],
@@ -300,9 +422,9 @@ def login():
     return render_template('login.html', admin_view=admin.index_view)
 
 @app.route('/logout')
-@login_required
 def logout():
-    logout_user()
+    if current_user.is_authenticated:
+        logout_user()
     return redirect(url_for('login'))
 
 # --------------------------------------------------------------------
@@ -403,6 +525,56 @@ def api_blog_detail(slug):
         abort(404)
     return jsonify(blog_to_dict(blog))
 
+@app.route("/api/analytics", methods=["POST"])
+def api_analytics():
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+
+    session_id = data.get("session_id")
+    path = data.get("path")
+    scroll_depth = data.get("scroll_depth", 0)
+    
+    if not session_id or not path:
+        return jsonify({"error": "Missing required fields (session_id or path)"}), 400
+
+    # Optional: Get IP and User Agent
+    ip_address = request.remote_addr
+    user_agent = request.headers.get("User-Agent")
+
+    # Save to database
+    # Check if we should update an existing event for this session and path within a short timeframe (e.g. 30 mins)
+    # For simplicity, we just create a new record for every significant update, or we update the last one.
+    # Let's try to update the highest scroll depth for the same session and path today
+    
+    today_start = datetime.now(pytz.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    existing_event = VisitEvent.objects(
+        session_id=session_id, 
+        path=path,
+        timestamp__gte=today_start
+    ).first()
+
+    if existing_event:
+        # Update scroll depth if it's higher
+        if scroll_depth > existing_event.scroll_depth:
+            existing_event.scroll_depth = scroll_depth
+            existing_event.timestamp = datetime.now(pytz.utc) # update timestamp to last interaction
+            existing_event.save()
+            return jsonify({"status": "updated sequence"}), 200
+        return jsonify({"status": "ignored lower scroll"}), 200
+    else:
+        # Create new event
+        new_event = VisitEvent(
+            session_id=session_id,
+            path=path,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            timestamp=datetime.now(pytz.utc),
+            scroll_depth=scroll_depth
+        )
+        new_event.save()
+        return jsonify({"status": "created"}), 201
+
 # --------------------------------------------------------------------
 # Entrypoint
 # --------------------------------------------------------------------
@@ -410,4 +582,4 @@ def api_blog_detail(slug):
 if __name__ == "__main__":
     # In production, Render will provide a PORT environment variable
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=False)
+    app.run(host="0.0.0.0", port=port, debug=True)

@@ -24,7 +24,9 @@ def seed_data():
     About.objects(title="About Me").update_one(
         upsert=True, 
         set__body="I am Dipendra Yadav, an automation and platform engineer passionate about building reliable, scalable, and sustainable systems...",
-        set__hero_image="img/sunset.jpg"
+        set__hero_image="img/sunset.jpg",
+        set__whatsapp="+917742228345",
+        set__email="dipendrayadav299@gmail.com"
     )
     print("Seeded Page Metadata.")
 

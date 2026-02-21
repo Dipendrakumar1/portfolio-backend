@@ -4,90 +4,156 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Login</title>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <title>Admin Login | Portfolio Dashboard</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@400;600;700&display=swap"
+        rel="stylesheet">
     <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --text-color: #f8fafc;
+            --accent-color: #38bdf8;
+            --border-color: rgba(56, 189, 248, 0.2);
+        }
+
         body {
-            background-color: #2b3337;
-            color: #b2e2c5;
-            font-family: 'Fira Code', monospace;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Inter', sans-serif;
             display: flex;
             align-items: center;
             justify-content: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
+            background-image: radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.05) 0%, transparent 50%);
         }
 
         .login-box {
-            background-color: #364044;
+            background: var(--card-bg);
             padding: 40px;
-            border: 1px solid #4a5a5f;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            backdrop-filter: blur(12px);
             width: 100%;
             max-width: 400px;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h2 {
+            font-family: 'Outfit', sans-serif;
+            margin-top: 0;
+            margin-bottom: 8px;
+            text-align: center;
+            color: var(--text-color);
+            font-weight: 700;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #94a3b8;
+            font-size: 14px;
+            margin-bottom: 32px;
         }
 
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 24px;
         }
 
         label {
             display: block;
             margin-bottom: 8px;
             font-weight: 500;
+            font-size: 14px;
+            color: #cbd5e1;
         }
 
         .form-control {
-            background-color: #2b3337;
-            border: 1px solid #8fdac2;
-            color: #b2e2c5;
+            background-color: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            color: var(--text-color);
             width: 100%;
-            padding: 10px;
+            padding: 12px 16px;
             box-sizing: border-box;
-            /* Fix width padding issue */
-            border-radius: 4px;
+            border-radius: 8px;
             font-family: inherit;
+            font-size: 15px;
+            transition: all 0.2s ease;
         }
 
         .form-control:focus {
             outline: none;
-            border-color: #c1ffd2;
-            box-shadow: 0 0 0 2px rgba(143, 218, 194, 0.2);
+            border-color: var(--accent-color);
+            background-color: rgba(15, 23, 42, 0.8);
+            box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.15);
         }
 
         .btn-primary {
-            background-color: #8fdac2;
+            background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
             border: none;
-            color: #2b3337;
-            font-weight: bold;
+            color: white;
+            font-weight: 600;
             width: 100%;
-            padding: 12px;
-            border-radius: 4px;
+            padding: 14px;
+            border-radius: 8px;
             cursor: pointer;
             font-family: inherit;
             font-size: 16px;
-            transition: background 0.2s;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-top: 8px;
+            box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
         }
 
         .btn-primary:hover {
-            background-color: #9ee3b1;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(56, 189, 248, 0.4);
+            filter: brightness(1.1);
         }
 
-        h2 {
-            margin-top: 0;
-            margin-bottom: 30px;
-            text-align: center;
-            color: #9ee3b1;
+        .btn-primary:active {
+            transform: translateY(0);
         }
 
         .alert {
-            background-color: #ff6b6b;
-            color: white;
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 20px;
+            background-color: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #f87171;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 24px;
             text-align: center;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .alert::before {
+            content: '!';
+            background: #ef4444;
+            color: white;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            margin-right: 8px;
         }
     </style>
 </head>
@@ -95,10 +161,12 @@
 <body>
     <div class="login-box">
         <h2>Admin Login</h2>
+        <div class="subtitle">Access the portfolio control center</div>
+
         {% with messages = get_flashed_messages() %}
         {% if messages %}
         {% for message in messages %}
-        <div class="alert alert-danger">{{ message }}</div>
+        <div class="alert">{{ message }}</div>
         {% endfor %}
         {% endif %}
         {% endwith %}
@@ -106,13 +174,13 @@
         <form method="POST">
             <div class="form-group">
                 <label>Username</label>
-                <input type="text" name="username" class="form-control" required autofocus>
+                <input type="text" name="username" class="form-control" placeholder="Enter username" required autofocus>
             </div>
             <div class="form-group">
                 <label>Password</label>
-                <input type="password" name="password" class="form-control" required>
+                <input type="password" name="password" class="form-control" placeholder="Enter password" required>
             </div>
-            <button type="submit" class="btn btn-primary">Login</button>
+            <button type="submit" class="btn btn-primary">Sign In</button>
         </form>
     </div>
 </body>

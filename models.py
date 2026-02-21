@@ -121,6 +121,8 @@ class About(db.DynamicDocument):
     title = db.StringField(default="About Me")
     body = db.StringField()
     hero_image = db.StringField()
+    whatsapp = db.StringField()
+    email = db.StringField()
     
     # Embedded Sections Removed
     # skills = db.ListField(db.EmbeddedDocumentField(Skill))
@@ -173,3 +175,14 @@ class User(db.Document, UserMixin):
 
     def __repr__(self):
         return f"<User {self.username}>"
+
+class VisitEvent(db.DynamicDocument):
+    session_id = db.StringField(required=True)
+    path = db.StringField(required=True)
+    ip_address = db.StringField()
+    user_agent = db.StringField()
+    timestamp = db.DateTimeField(required=True)
+    scroll_depth = db.IntField(default=0)
+
+    def __repr__(self):
+        return f"<VisitEvent {self.path} {self.timestamp}>"

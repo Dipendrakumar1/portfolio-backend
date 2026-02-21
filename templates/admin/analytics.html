@@ -1,0 +1,159 @@
+{% extends 'admin/master.html' %}
+
+{% block body %}
+<div class="container-fluid padding-top">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2>Site Analytics</h2>
+            <hr>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header">Total Visits</div>
+                <div class="card-body">
+                    <h5 class="card-title" style="font-size: 2rem; color: #38bdf8 !important;">{{ total_visits }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header">Unique Visitors</div>
+                <div class="card-body">
+                    <h5 class="card-title" style="font-size: 2rem; color: #38bdf8 !important;">{{ unique_visitors }}
+                    </h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header">Average Scroll Depth</div>
+                <div class="card-body">
+                    <h5 class="card-title" style="font-size: 2rem; color: #38bdf8 !important;">{{ avg_scroll_depth }}%
+                    </h5>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">Visits Over Last 7 Days</div>
+                <div class="card-body">
+                    <canvas id="dailyChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">Visits Over Last 6 Months</div>
+                <div class="card-body">
+                    <canvas id="monthlyChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Pages Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">Top Pages</div>
+                <div class="card-body">
+                    <table class="table table-striped table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Page Path</th>
+                                <th>Total Views</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for page in top_pages %}
+                            <tr>
+                                <td>{{ page.path }}</td>
+                                <td>{{ page.views }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="2" class="text-center">No data available yet</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .padding-top {
+        padding-top: 20px;
+    }
+</style>
+
+<!-- Include Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // Daily Chart
+        var ctxDaily = document.getElementById('dailyChart').getContext('2d');
+        var dailyChart = new Chart(ctxDaily, {
+            type: 'line',
+            data: {
+                labels: {{ daily_labels | tojson }},
+        datasets: [{
+            label: 'Visits',
+            data: {{ daily_data | tojson }},
+        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+        borderColor: 'rgba(54, 162, 235, 1)',
+        borderWidth: 2,
+        tension: 0.1,
+        fill: true
+                }]
+            },
+        options: {
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    precision: 0
+                }
+            }
+        }
+    }
+        });
+
+    // Monthly Chart
+    var ctxMonthly = document.getElementById('monthlyChart').getContext('2d');
+    var monthlyChart = new Chart(ctxMonthly, {
+        type: 'bar',
+        data: {
+            labels: {{ monthly_labels | tojson }},
+    datasets: [{
+        label: 'Visits',
+        data: {{ monthly_data | tojson }},
+        backgroundColor: 'rgba(56, 189, 248, 0.4)',
+        borderColor: 'rgba(56, 189, 248, 1)',
+        borderWidth: 1
+                }]
+            },
+    options: {
+        scales: {
+            y: {
+                beginAtZero: true,
+                    ticks: {
+                    precision: 0
+                }
+            }
+        }
+    }
+        });
+    });
+</script>
+{% endblock %}
