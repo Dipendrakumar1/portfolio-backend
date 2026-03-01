@@ -1,5 +1,13 @@
 {% extends 'admin/master.html' %}
 
+{% block head_tail %}{{ super() }}
+<style>
+    .padding-top {
+        padding-top: 20px;
+    }
+</style>
+{% endblock %}
+
 {% block body %}
 <div class="container-fluid padding-top">
     <div class="row mb-4">
@@ -90,69 +98,70 @@
         </div>
     </div>
 </div>
+{% endblock %}
 
-<style>
-    .padding-top {
-        padding-top: 20px;
-    }
-</style>
-
-<!-- Include Chart.js -->
+{% block tail %}{{ super() }}
+<script type="application/json" id="chart-data">
+{
+    "dailyLabels": {{ daily_labels | tojson }},
+    "dailyData": {{ daily_data | tojson }},
+    "monthlyLabels": {{ monthly_labels | tojson }},
+    "monthlyData": {{ monthly_data | tojson }}
+}
+</script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function () {
+        var chartData = JSON.parse(document.getElementById('chart-data').textContent);
+
         // Daily Chart
         var ctxDaily = document.getElementById('dailyChart').getContext('2d');
-        var dailyChart = new Chart(ctxDaily, {
+        new Chart(ctxDaily, {
             type: 'line',
             data: {
-                labels: {{ daily_labels | tojson }},
-        datasets: [{
-            label: 'Visits',
-            data: {{ daily_data | tojson }},
-        backgroundColor: 'rgba(54, 162, 235, 0.2)',
-        borderColor: 'rgba(54, 162, 235, 1)',
-        borderWidth: 2,
-        tension: 0.1,
-        fill: true
+                labels: chartData.dailyLabels,
+                datasets: [{
+                    label: 'Visits',
+                    data: chartData.dailyData,
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 2,
+                    tension: 0.1,
+                    fill: true
                 }]
             },
-        options: {
-        scales: {
-            y: {
-                beginAtZero: true,
-                ticks: {
-                    precision: 0
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { precision: 0 }
+                    }
                 }
             }
-        }
-    }
         });
 
-    // Monthly Chart
-    var ctxMonthly = document.getElementById('monthlyChart').getContext('2d');
-    var monthlyChart = new Chart(ctxMonthly, {
-        type: 'bar',
-        data: {
-            labels: {{ monthly_labels | tojson }},
-    datasets: [{
-        label: 'Visits',
-        data: {{ monthly_data | tojson }},
-        backgroundColor: 'rgba(56, 189, 248, 0.4)',
-        borderColor: 'rgba(56, 189, 248, 1)',
-        borderWidth: 1
+        // Monthly Chart
+        var ctxMonthly = document.getElementById('monthlyChart').getContext('2d');
+        new Chart(ctxMonthly, {
+            type: 'bar',
+            data: {
+                labels: chartData.monthlyLabels,
+                datasets: [{
+                    label: 'Visits',
+                    data: chartData.monthlyData,
+                    backgroundColor: 'rgba(56, 189, 248, 0.4)',
+                    borderColor: 'rgba(56, 189, 248, 1)',
+                    borderWidth: 1
                 }]
             },
-    options: {
-        scales: {
-            y: {
-                beginAtZero: true,
-                    ticks: {
-                    precision: 0
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { precision: 0 }
+                    }
                 }
             }
-        }
-    }
         });
     });
 </script>
