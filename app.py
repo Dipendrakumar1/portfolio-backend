@@ -10,7 +10,7 @@ from wtforms import TextAreaField
 from wtforms.widgets import TextArea
 
 from config import Config
-from models import db, Project, Diary, DiarySection, DiaryBullet, Certificate, About, Blog, HomeCard, User, Experience, Skill, Interest, Tool, Language, Achievement, ProjectsPage, BlogsPage, DiaryPage, VisitEvent
+from models import db, Project, Diary, DiarySection, DiaryBullet, Certificate, About, Blog, HomeCard, User, Experience, Skill, Interest, Tool, Language, Achievement, ProjectsPage, BlogsPage, DiaryPage, VisitEvent, LikeEvent
 from datetime import datetime, timedelta
 import pytz
 import markdown as md
@@ -208,6 +208,14 @@ class AnalyticsView(BaseView):
         top_pages = list(VisitEvent.objects.aggregate(*pipeline_pages))
         top_pages_data = [{"path": p["_id"], "views": p["views"]} for p in top_pages]
 
+        # Blog Likes for Analytics
+        pipeline_likes = [
+            {"$group": {"_id": "$blog_slug", "count": {"$sum": 1}}},
+            {"$sort": {"count": -1}}
+        ]
+        blog_likes = list(LikeEvent.objects.aggregate(*pipeline_likes))
+        blog_likes_data = [{"slug": l["_id"], "count": l["count"]} for l in blog_likes]
+
         return self.render('admin/analytics.html', 
                            total_visits=total_visits_count,
                            unique_visitors=unique_visitors_count,
@@ -216,7 +224,8 @@ class AnalyticsView(BaseView):
                            daily_data=daily_data,
                            monthly_labels=monthly_labels,
                            monthly_data=monthly_data,
-                           top_pages=top_pages_data)
+                           top_pages=top_pages_data,
+                           blog_likes=blog_likes_data)
 
 from flask_admin.menu import MenuLink
 
@@ -252,16 +261,12 @@ admin.add_view(BaseModelView(HomeCard, name="Manage Home Cards", category="Gener
 # --------------------------------------------------------------------
 
 def project_to_dict(p):
-    long_desc = p.long_description or ""
-    # Convert markdown to HTML if content doesn't already contain HTML tags
-    if long_desc and "<" not in long_desc:
-        long_desc = md.markdown(long_desc, extensions=["extra", "nl2br"])
     return {
         "id": str(p.id),
         "slug": p.slug,
         "title": p.title,
         "short_description": p.short_description,
-        "long_description": long_desc,
+        "long_description": p.long_description or "",
         "hero_image": p.hero_image,
         "repo_url": p.repo_url,
         "live_url": p.live_url,
@@ -316,6 +321,7 @@ def blog_to_dict(b):
         "word_count": b.word_count,
         "hero_image": b.hero_image,
         "content": b.content,
+        "likes": b.likes,
         "order": b.order
     }
 
@@ -524,6 +530,32 @@ def api_blog_detail(slug):
     if not blog:
         abort(404)
     return jsonify(blog_to_dict(blog))
+
+@app.route("/api/blogs/<slug>/like", methods=["POST"])
+def api_blog_like(slug):
+    data = request.get_json()
+    session_id = data.get("session_id") if data else None
+    
+    if not session_id:
+        return jsonify({"error": "Missing session_id"}), 400
+        
+    blog = Blog.objects(slug=slug).first()
+    if not blog:
+        abort(404)
+        
+    # Check if already liked in this session
+    existing_like = LikeEvent.objects(blog_slug=slug, session_id=session_id).first()
+    if existing_like:
+        return jsonify({"message": "Already liked", "likes": blog.likes}), 200
+        
+    # Increment likes and record event
+    blog.likes += 1
+    blog.save()
+    
+    like_event = LikeEvent(blog_slug=slug, session_id=session_id, timestamp=datetime.utcnow())
+    like_event.save()
+    
+    return jsonify({"message": "Liked successfully", "likes": blog.likes}), 201
 
 @app.route("/api/analytics", methods=["POST"])
 def api_analytics():

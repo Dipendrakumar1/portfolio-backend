@@ -1,6 +1,6 @@
 from flask_mongoengine import MongoEngine
 from flask_login import UserMixin
-from datetime import date
+from datetime import date, datetime
 
 db = MongoEngine()
 
@@ -145,10 +145,19 @@ class Blog(db.DynamicDocument):
     word_count = db.IntField(default=0)
     hero_image = db.StringField()
     content = db.StringField()
+    likes = db.IntField(default=0)
     order = db.IntField(default=0)
 
     def __repr__(self):
         return f"<Blog {self.slug}>"
+
+class LikeEvent(db.DynamicDocument):
+    blog_slug = db.StringField(required=True)
+    session_id = db.StringField(required=True)
+    timestamp = db.DateTimeField(default=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<LikeEvent {self.blog_slug} {self.session_id}>"
 
 class BlogsPage(db.DynamicDocument):
     title = db.StringField(default="Blogs")
