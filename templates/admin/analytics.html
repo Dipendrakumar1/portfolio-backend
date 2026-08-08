@@ -1,124 +1,98 @@
 {% extends 'admin/master.html' %}
 
 {% block head_tail %}{{ super() }}
-<style>
-    .padding-top {
-        padding-top: 20px;
-    }
-</style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.css">
 {% endblock %}
 
 {% block body %}
-<div class="container-fluid padding-top">
-    <div class="row mb-4">
+<div class="container-fluid" style="padding-top: 30px;">
+    <!-- Header -->
+    <div class="row mb-5">
         <div class="col-12">
-            <h2>Site Analytics</h2>
-            <hr>
+            <h2 class="text-gradient" style="font-weight: 700; font-size: 2.5rem; margin-bottom: 8px;">📊 Site Analytics</h2>
+            <p style="color: var(--text-secondary); margin: 0;">Monitor your website performance and visitor engagement</p>
         </div>
     </div>
 
     <!-- Summary Cards -->
-    <div class="row mb-4">
-        <div class="col-md-4">
-            <div class="card mb-3">
-                <div class="card-header">Total Visits</div>
-                <div class="card-body">
-                    <h5 class="card-title" style="font-size: 2rem; color: #38bdf8 !important;">{{ total_visits }}</h5>
+    <div class="row mb-5">
+        <div class="col-md-4 mb-4">
+            <div class="stats-card">
+                <div class="stats-icon" style="background: linear-gradient(135deg, #3b82f6, #2563eb); color: white;">
+                    👁️
                 </div>
+                <div class="stats-label">Total Visits</div>
+                <div class="stats-value">{{ total_visits }}</div>
+                <div style="color: var(--text-secondary); font-size: 0.875rem;">All time page views</div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="card mb-3">
-                <div class="card-header">Unique Visitors</div>
-                <div class="card-body">
-                    <h5 class="card-title" style="font-size: 2rem; color: #38bdf8 !important;">{{ unique_visitors }}
-                    </h5>
+        <div class="col-md-4 mb-4">
+            <div class="stats-card">
+                <div class="stats-icon" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white;">
+                    👥
                 </div>
+                <div class="stats-label">Unique Visitors</div>
+                <div class="stats-value">{{ unique_visitors }}</div>
+                <div style="color: var(--text-secondary); font-size: 0.875rem;">Distinct sessions</div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="card mb-3">
-                <div class="card-header">Average Scroll Depth</div>
-                <div class="card-body">
-                    <h5 class="card-title" style="font-size: 2rem; color: #38bdf8 !important;">{{ avg_scroll_depth }}%
-                    </h5>
+        <div class="col-md-4 mb-4">
+            <div class="stats-card">
+                <div class="stats-icon" style="background: linear-gradient(135deg, #10b981, #059669); color: white;">
+                    📜
                 </div>
+                <div class="stats-label">Avg Scroll Depth</div>
+                <div class="stats-value">{{ avg_scroll_depth }}%</div>
+                <div style="color: var(--text-secondary); font-size: 0.875rem;">User engagement</div>
             </div>
         </div>
     </div>
 
     <!-- Charts -->
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">Visits Over Last 7 Days</div>
-                <div class="card-body">
-                    <canvas id="dailyChart" height="200"></canvas>
-                </div>
+    <div class="row mb-5">
+        <div class="col-md-6 mb-4">
+            <div class="chart-container">
+                <h3>📈 Visits - Last 7 Days</h3>
+                <canvas id="dailyChart" height="250"></canvas>
             </div>
         </div>
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">Visits Over Last 6 Months</div>
-                <div class="card-body">
-                    <canvas id="monthlyChart" height="200"></canvas>
-                </div>
+        <div class="col-md-6 mb-4">
+            <div class="chart-container">
+                <h3>📊 Visits - Last 6 Months</h3>
+                <canvas id="monthlyChart" height="250"></canvas>
             </div>
         </div>
     </div>
 
     <!-- Top Pages Table -->
-    <div class="row">
+    <div class="row mb-5">
         <div class="col-12">
             <div class="card">
-                <div class="card-header">Top Pages</div>
-                <div class="card-body">
-                    <table class="table table-striped table-bordered">
-                        <thead>
-                            <tr>
-                                <th>Page Path</th>
-                                <th>Total Views</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for page in top_pages %}
-                            <tr>
-                                <td>{{ page.path }}</td>
-                                <td>{{ page.views }}</td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="2" class="text-center">No data available yet</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                <div class="card-header">
+                    <h3 style="margin: 0; font-size: 1.25rem;">🔥 Top Pages</h3>
                 </div>
-            </div>
-        </div>
-
-        <!-- Blog Likes Table -->
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header">Blog Likes</div>
-                    <div class="card-body">
-                        <table class="table table-striped table-bordered text-info">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
                             <thead>
                                 <tr>
-                                    <th>Blog Title (Slug)</th>
-                                    <th>Total Likes</th>
+                                    <th style="width: 70%;">Page Path</th>
+                                    <th style="width: 30%;">Total Views</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for like in blog_likes %}
+                                {% for page in top_pages %}
                                 <tr>
-                                    <td>{{ like.slug }}</td>
-                                    <td>{{ like.count }}</td>
+                                    <td><code style="background: rgba(59, 130, 246, 0.1); padding: 4px 8px; border-radius: 4px; color: var(--primary-color);">{{ page.path }}</code></td>
+                                    <td>
+                                        <span class="badge badge-primary">{{ page.views }}</span>
+                                    </td>
                                 </tr>
                                 {% else %}
                                 <tr>
-                                    <td colspan="2" class="text-center">No likes recorded yet</td>
+                                    <td colspan="2" class="text-center" style="padding: 40px; color: var(--text-secondary);">
+                                        No data available yet. Start tracking to see analytics here.
+                                    </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -128,10 +102,49 @@
             </div>
         </div>
     </div>
-    {% endblock %}
 
-    {% block tail %}{{ super() }}
-    <script type="application/json" id="chart-data">
+    <!-- Blog Likes Table -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 style="margin: 0; font-size: 1.25rem;">❤️ Blog Likes</h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th style="width: 70%;">Blog Slug</th>
+                                    <th style="width: 30%;">Total Likes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for like in blog_likes %}
+                                <tr>
+                                    <td><code style="background: rgba(239, 68, 68, 0.1); padding: 4px 8px; border-radius: 4px; color: #f43f5e;">{{ like.slug }}</code></td>
+                                    <td>
+                                        <span class="badge badge-danger">{{ like.count }}</span>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="2" class="text-center" style="padding: 40px; color: var(--text-secondary);">
+                                        No likes recorded yet. Share your blog posts to get more engagement!
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block tail %}{{ super() }}
+<script type="application/json" id="chart-data">
 {
     "dailyLabels": {{ daily_labels | tojson }},
     "dailyData": {{ daily_data | tojson }},
@@ -139,60 +152,132 @@
     "monthlyData": {{ monthly_data | tojson }}
 }
 </script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            var chartData = JSON.parse(document.getElementById('chart-data').textContent);
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const chartData = JSON.parse(document.getElementById('chart-data').textContent);
 
-            // Daily Chart
-            var ctxDaily = document.getElementById('dailyChart').getContext('2d');
-            new Chart(ctxDaily, {
-                type: 'line',
-                data: {
-                    labels: chartData.dailyLabels,
-                    datasets: [{
-                        label: 'Visits',
-                        data: chartData.dailyData,
-                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        borderWidth: 2,
-                        tension: 0.1,
-                        fill: true
-                    }]
+        // Modern chart defaults
+        Chart.defaults.color = '#94a3b8';
+        Chart.defaults.borderColor = 'rgba(51, 65, 85, 0.5)';
+        Chart.defaults.font.family = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+
+        // Daily Chart - Modern Line Chart
+        const ctxDaily = document.getElementById('dailyChart').getContext('2d');
+        new Chart(ctxDaily, {
+            type: 'line',
+            data: {
+                labels: chartData.dailyLabels,
+                datasets: [{
+                    label: 'Visits',
+                    data: chartData.dailyData,
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 3,
+                    tension: 0.4,
+                    fill: true,
+                    pointBackgroundColor: '#3b82f6',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 5,
+                    pointHoverRadius: 7
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        titleColor: '#f1f5f9',
+                        bodyColor: '#94a3b8',
+                        borderColor: 'rgba(59, 130, 246, 0.5)',
+                        borderWidth: 1,
+                        padding: 12,
+                        cornerRadius: 8
+                    }
                 },
-                options: {
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: { precision: 0 }
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0,
+                            color: '#94a3b8'
+                        },
+                        grid: {
+                            color: 'rgba(51, 65, 85, 0.3)'
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            color: '#94a3b8'
+                        },
+                        grid: {
+                            display: false
                         }
                     }
                 }
-            });
-
-            // Monthly Chart
-            var ctxMonthly = document.getElementById('monthlyChart').getContext('2d');
-            new Chart(ctxMonthly, {
-                type: 'bar',
-                data: {
-                    labels: chartData.monthlyLabels,
-                    datasets: [{
-                        label: 'Visits',
-                        data: chartData.monthlyData,
-                        backgroundColor: 'rgba(56, 189, 248, 0.4)',
-                        borderColor: 'rgba(56, 189, 248, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: { precision: 0 }
-                        }
-                    }
-                }
-            });
+            }
         });
-    </script>
-    {% endblock %}
+
+        // Monthly Chart - Modern Bar Chart
+        const ctxMonthly = document.getElementById('monthlyChart').getContext('2d');
+        new Chart(ctxMonthly, {
+            type: 'bar',
+            data: {
+                labels: chartData.monthlyLabels,
+                datasets: [{
+                    label: 'Visits',
+                    data: chartData.monthlyData,
+                    backgroundColor: 'rgba(139, 92, 246, 0.6)',
+                    borderColor: 'rgba(139, 92, 246, 1)',
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        titleColor: '#f1f5f9',
+                        bodyColor: '#94a3b8',
+                        borderColor: 'rgba(139, 92, 246, 0.5)',
+                        borderWidth: 1,
+                        padding: 12,
+                        cornerRadius: 8
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0,
+                            color: '#94a3b8'
+                        },
+                        grid: {
+                            color: 'rgba(51, 65, 85, 0.3)'
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            color: '#94a3b8'
+                        },
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

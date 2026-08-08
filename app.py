@@ -11,9 +11,8 @@ from wtforms.widgets import TextArea
 
 from config import Config
 from models import db, Project, Diary, DiarySection, DiaryBullet, Certificate, About, Blog, HomeCard, User, Experience, Skill, Interest, Tool, Language, Achievement, ProjectsPage, BlogsPage, DiaryPage, VisitEvent, LikeEvent
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import pytz
-import markdown as md
 from flask_admin import BaseView
 
 # --------------------------------------------------------------------
@@ -22,6 +21,9 @@ from flask_admin import BaseView
 
 app = Flask(__name__)
 app.config.from_object(Config)
+
+# Validate required environment variables
+Config.validate()
 
 # Setup Flask-Login
 login_manager = LoginManager()
@@ -36,8 +38,9 @@ def load_user(user_id):
 
 db.init_app(app)
 
-# CORS configuration: Allow localhost for dev and optional FRONTEND_URL from environment
-CORS(app)
+# CORS configuration: Restrict to specific origins
+frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
+CORS(app, origins=[frontend_url])
 
 try:
     # Attempt to access the database to verify connection
@@ -108,8 +111,7 @@ class ProjectAdmin(BaseModelView):
     }
     form_widget_args = {
         "long_description": {
-            "class": "easymde-editor",
-            "rows": 20,
+            "class": "quill-editor",
         },
     }
 
@@ -125,8 +127,7 @@ class BlogAdmin(BaseModelView):
     }
     form_widget_args = {
         "content": {
-            "class": "easymde-editor",
-            "rows": 25,
+            "class": "quill-editor",
         },
     }
 
@@ -140,7 +141,9 @@ class AboutAdmin(BaseModelView):
         "body": TextAreaField,
     }
     form_widget_args = {
-        "body": {"widget": RichTextArea()},
+        "body": {
+            "class": "quill-editor",
+        },
     }
 
 # --- Custom Analytics View ---
@@ -552,7 +555,7 @@ def api_blog_like(slug):
     blog.likes += 1
     blog.save()
     
-    like_event = LikeEvent(blog_slug=slug, session_id=session_id, timestamp=datetime.utcnow())
+    like_event = LikeEvent(blog_slug=slug, session_id=session_id, timestamp=datetime.now(timezone.utc))
     like_event.save()
     
     return jsonify({"message": "Liked successfully", "likes": blog.likes}), 201
@@ -614,4 +617,6 @@ def api_analytics():
 if __name__ == "__main__":
     # In production, Render will provide a PORT environment variable
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    # Only enable debug mode in development
+    debug_mode = os.getenv("FLASK_ENV") == "development"
+    app.run(host="0.0.0.0", port=port, debug=debug_mode)
