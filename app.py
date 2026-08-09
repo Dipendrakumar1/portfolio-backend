@@ -1,5 +1,5 @@
 import os
-from flask import Flask, jsonify, abort, render_template, redirect, url_for, request, flash
+from flask import Flask, jsonify, abort, render_template, redirect, url_for, request, flash, Response
 from flask_admin import Admin, AdminIndexView, expose
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash
@@ -8,6 +8,7 @@ from flask_admin.contrib.mongoengine import ModelView
 from flask_cors import CORS
 from wtforms import TextAreaField
 from wtforms.widgets import TextArea
+from html import escape
 
 from config import Config
 from models import db, Project, Diary, DiarySection, DiaryBullet, Certificate, About, Blog, HomeCard, User, Experience, Skill, Interest, Tool, Language, Achievement, ProjectsPage, BlogsPage, DiaryPage, VisitEvent, LikeEvent
@@ -39,7 +40,7 @@ def load_user(user_id):
 db.init_app(app)
 
 # CORS configuration: Restrict to specific origins
-frontend_url = os.getenv("FRONTEND_URL", "https://www.dipendrakumaryadav.com.np")
+frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
 CORS(app, origins=[frontend_url])
 
 try:
@@ -609,6 +610,61 @@ def api_analytics():
         )
         new_event.save()
         return jsonify({"status": "created"}), 201
+
+# --------------------------------------------------------------------
+# SEO: Dynamic XML sitemap
+# --------------------------------------------------------------------
+
+@app.route("/api/sitemap.xml")
+def api_sitemap():
+    """Dynamically generate an XML sitemap that always reflects the
+    current set of pages, blog posts, and diary entries."""
+    domain = os.getenv("SITE_URL", "https://www.dipendrakumaryadav.com.np")
+
+    # Static / main pages: (path, priority, changefreq)
+    static_pages = [
+        ("/", "1.0", "weekly"),
+        ("/aboutme", "0.8", "monthly"),
+        ("/blog", "0.9", "weekly"),
+        ("/projects", "0.9", "weekly"),
+        ("/mydiary", "0.8", "weekly"),
+        ("/hire-me", "0.7", "monthly"),
+    ]
+
+    lines = ['<?xml version="1.0" encoding="UTF-8"?>']
+    lines.append('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">')
+
+    for path, priority, changefreq in static_pages:
+        lines.append("  <url>")
+        lines.append(f"    <loc>{escape(domain + path)}</loc>")
+        lines.append(f"    <changefreq>{changefreq}</changefreq>")
+        lines.append(f"    <priority>{priority}</priority>")
+        lines.append("  </url>")
+
+    # Blog posts -> /blog/<slug>
+    for b in Blog.objects.all().order_by("-published_at"):
+        lines.append("  <url>")
+        lines.append(f"    <loc>{escape(domain + '/blog/' + b.slug)}</loc>")
+        if b.published_at:
+            lines.append(f"    <lastmod>{b.published_at.isoformat()}</lastmod>")
+        lines.append("    <changefreq>monthly</changefreq>")
+        lines.append("    <priority>0.8</priority>")
+        lines.append("  </url>")
+
+    # Diary entries -> /mydiary/<slug>
+    for d in Diary.objects.all().order_by("-date"):
+        lines.append("  <url>")
+        lines.append(f"    <loc>{escape(domain + '/mydiary/' + d.slug)}</loc>")
+        if d.date:
+            lines.append(f"    <lastmod>{d.date.isoformat()}</lastmod>")
+        lines.append("    <changefreq>monthly</changefreq>")
+        lines.append("    <priority>0.7</priority>")
+        lines.append("  </url>")
+
+    lines.append("</urlset>")
+    xml = "\n".join(lines)
+
+    return Response(xml, mimetype="application/xml")
 
 # --------------------------------------------------------------------
 # Entrypoint
