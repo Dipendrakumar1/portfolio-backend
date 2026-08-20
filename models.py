@@ -12,6 +12,7 @@ class Project(db.DynamicDocument):
     hero_image = db.StringField()
     repo_url = db.StringField()
     live_url = db.StringField()
+    category = db.StringField(default="Personal", choices=["Real Client", "Personal"])
     order = db.IntField(default=0)
 
     def __repr__(self):
@@ -123,6 +124,7 @@ class About(db.DynamicDocument):
     hero_image = db.StringField()
     whatsapp = db.StringField()
     email = db.StringField()
+    resume = db.StringField()
     
     # Embedded Sections Removed
     # skills = db.ListField(db.EmbeddedDocumentField(Skill))
@@ -190,8 +192,25 @@ class VisitEvent(db.DynamicDocument):
     path = db.StringField(required=True)
     ip_address = db.StringField()
     user_agent = db.StringField()
+    referrer = db.StringField(default="Direct / Bookmark")
+    device_type = db.StringField(default="Desktop")
+    browser = db.StringField(default="Unknown")
+    os = db.StringField(default="Unknown")
+    screen_resolution = db.StringField()
     timestamp = db.DateTimeField(required=True)
     scroll_depth = db.IntField(default=0)
 
     def __repr__(self):
         return f"<VisitEvent {self.path} {self.timestamp}>"
+
+class ContactMessage(db.DynamicDocument):
+    name = db.StringField(required=True)
+    email = db.StringField(required=True)
+    subject = db.StringField(default="General Inquiry")
+    message = db.StringField(required=True)
+    created_at = db.DateTimeField(default=datetime.utcnow)
+    is_read = db.BooleanField(default=False)
+
+    def __repr__(self):
+        return f"<ContactMessage {self.name} - {self.email}>"
+

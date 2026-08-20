@@ -3,7 +3,6 @@ from flask import Flask, jsonify, abort, render_template, redirect, url_for, req
 from flask_admin import Admin, AdminIndexView, expose
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash
-from flask_admin import Admin
 from flask_admin.contrib.mongoengine import ModelView
 from flask_cors import CORS
 from wtforms import TextAreaField
@@ -11,7 +10,7 @@ from wtforms.widgets import TextArea
 from html import escape
 
 from config import Config
-from models import db, Project, Diary, DiarySection, DiaryBullet, Certificate, About, Blog, HomeCard, User, Experience, Skill, Interest, Tool, Language, Achievement, ProjectsPage, BlogsPage, DiaryPage, VisitEvent, LikeEvent
+from models import db, Project, Diary, DiarySection, DiaryBullet, Certificate, About, Blog, HomeCard, User, Experience, Skill, Interest, Tool, Language, Achievement, ProjectsPage, BlogsPage, DiaryPage, VisitEvent, LikeEvent, ContactMessage
 from datetime import datetime, timedelta, timezone
 import pytz
 from flask_admin import BaseView
@@ -103,7 +102,10 @@ class BaseModelView(ModelView):
 
 class ProjectAdmin(BaseModelView):
     column_searchable_list = ("title", "slug", "short_description")
-    column_filters = ("title",)
+    column_filters = ("title", "category")
+    column_choices = {
+        "category": [("Real Client", "Real Client"), ("Personal", "Personal")],
+    }
     column_exclude_list = ("long_description",)
     create_modal = False
     edit_modal = False
@@ -136,6 +138,29 @@ class DiaryAdmin(BaseModelView):
     column_searchable_list = ("month_label", "slug", "author")
     column_filters = ("month_label", "slug", "author")
     column_default_sort = ("date", True)
+    column_exclude_list = ("summary", "sections")
+    create_modal = False
+    edit_modal = False
+    form_overrides = {
+        "summary": TextAreaField,
+    }
+    form_widget_args = {
+        "summary": {
+            "class": "quill-editor",
+        },
+    }
+
+class PageSettingsAdmin(BaseModelView):
+    create_modal = False
+    edit_modal = False
+    form_overrides = {
+        "description": TextAreaField,
+    }
+    form_widget_args = {
+        "description": {
+            "class": "quill-editor",
+        },
+    }
 
 class AboutAdmin(BaseModelView):
     form_overrides = {
@@ -158,11 +183,10 @@ class AnalyticsView(BaseView):
 
     @expose('/')
     def index(self):
-
         # Get total visits
         total_visits_count = VisitEvent.objects.count()
 
-        # Get unique visitors (approximated by unique session IDs)
+        # Get unique visitors
         unique_sessions = VisitEvent.objects.distinct('session_id')
         unique_visitors_count = len(unique_sessions)
 
@@ -172,7 +196,7 @@ class AnalyticsView(BaseView):
             {"$group": {"_id": None, "avg_scroll": {"$avg": "$max_scroll"}}}
         ]
         scroll_result = list(VisitEvent.objects.aggregate(*pipeline_scroll))
-        avg_scroll_depth = round(scroll_result[0]['avg_scroll'], 1) if scroll_result and scroll_result[0]['avg_scroll'] else 0
+        avg_scroll_depth = round(scroll_result[0]['avg_scroll'], 1) if scroll_result and scroll_result[0].get('avg_scroll') is not None else 0
 
         # Calculate dates for charts
         today = datetime.now(pytz.utc).replace(hour=0, minute=0, second=0, microsecond=0)
@@ -190,9 +214,7 @@ class AnalyticsView(BaseView):
         monthly_labels = []
         monthly_data = []
         for i in range(5, -1, -1):
-            # approximate 30 days per month
             month_start = today - timedelta(days=30*i)
-            # get to first day of that month
             month_start = month_start.replace(day=1)
             if i == 0:
                 month_end = today + timedelta(days=32)
@@ -212,7 +234,7 @@ class AnalyticsView(BaseView):
         top_pages = list(VisitEvent.objects.aggregate(*pipeline_pages))
         top_pages_data = [{"path": p["_id"], "views": p["views"]} for p in top_pages]
 
-        # Blog Likes for Analytics
+        # Blog Likes
         pipeline_likes = [
             {"$group": {"_id": "$blog_slug", "count": {"$sum": 1}}},
             {"$sort": {"count": -1}}
@@ -220,16 +242,114 @@ class AnalyticsView(BaseView):
         blog_likes = list(LikeEvent.objects.aggregate(*pipeline_likes))
         blog_likes_data = [{"slug": l["_id"], "count": l["count"]} for l in blog_likes]
 
+        # Traffic Sources / Referrers Breakdown
+        pipeline_sources = [
+            {"$group": {"_id": {"$ifNull": ["$referrer", "Direct / Bookmark"]}, "count": {"$sum": 1}}},
+            {"$sort": {"count": -1}},
+            {"$limit": 8}
+        ]
+        traffic_sources_raw = list(VisitEvent.objects.aggregate(*pipeline_sources))
+        traffic_sources = [{"name": s["_id"] or "Direct / Bookmark", "count": s["count"]} for s in traffic_sources_raw]
+
+        # Devices Breakdown
+        pipeline_devices = [
+            {"$group": {"_id": {"$ifNull": ["$device_type", "Desktop"]}, "count": {"$sum": 1}}},
+            {"$sort": {"count": -1}}
+        ]
+        device_stats = [{"name": d["_id"] or "Desktop", "count": d["count"]} for d in list(VisitEvent.objects.aggregate(*pipeline_devices))]
+
+        # Operating Systems Breakdown
+        pipeline_os = [
+            {"$group": {"_id": {"$ifNull": ["$os", "Unknown"]}, "count": {"$sum": 1}}},
+            {"$sort": {"count": -1}},
+            {"$limit": 6}
+        ]
+        os_stats = [{"name": o["_id"] or "Unknown", "count": o["count"]} for o in list(VisitEvent.objects.aggregate(*pipeline_os))]
+
+        # High-Intent Recruiter Leads Count (Sessions who visited /hire-me or /aboutme)
+        recruiter_sessions = VisitEvent.objects(path__in=["/hire-me", "/aboutme"]).distinct("session_id")
+        recruiter_leads_count = len(recruiter_sessions)
+
+        # Recent Visitor & Recruiter Journeys (Grouped by Session ID)
+        pipeline_journeys = [
+            {
+                "$sort": {"timestamp": -1}
+            },
+            {
+                "$group": {
+                    "_id": "$session_id",
+                    "paths": {"$addToSet": "$path"},
+                    "max_scroll": {"$max": "$scroll_depth"},
+                    "ip_address": {"$first": "$ip_address"},
+                    "device_type": {"$first": "$device_type"},
+                    "browser": {"$first": "$browser"},
+                    "os": {"$first": "$os"},
+                    "referrer": {"$first": "$referrer"},
+                    "screen_resolution": {"$first": "$screen_resolution"},
+                    "last_seen": {"$max": "$timestamp"},
+                    "interactions_count": {"$sum": 1}
+                }
+            },
+            {
+                "$sort": {"last_seen": -1}
+            },
+            {
+                "$limit": 25
+            }
+        ]
+        recent_journeys_raw = list(VisitEvent.objects.aggregate(*pipeline_journeys))
+        recent_journeys = []
+        for j in recent_journeys_raw:
+            paths = j.get("paths", [])
+            max_scroll = j.get("max_scroll", 0)
+            
+            # Determine interest tier
+            is_hire = any("/hire-me" in str(p) for p in paths)
+            is_about = any("/aboutme" in str(p) for p in paths)
+            is_projects = any("/projects" in str(p) for p in paths)
+            
+            if is_hire or (is_about and max_scroll >= 50):
+                interest_badge = "🔥 High Recruiter Interest"
+                interest_class = "badge-danger"
+            elif is_projects or len(paths) >= 3 or max_scroll >= 60:
+                interest_badge = "⭐ Engaged Explorer"
+                interest_class = "badge-primary"
+            else:
+                interest_badge = "👤 Casual Visitor"
+                interest_class = "badge-secondary"
+
+            recent_journeys.append({
+                "session_id": (j["_id"] or "")[:12] + "...",
+                "full_session_id": j["_id"],
+                "ip_address": j.get("ip_address") or "Private / Proxy",
+                "device_type": j.get("device_type") or "Desktop",
+                "os": j.get("os") or "Unknown",
+                "browser": j.get("browser") or "Browser",
+                "screen_resolution": j.get("screen_resolution") or "N/A",
+                "referrer": j.get("referrer") or "Direct",
+                "paths": paths,
+                "max_scroll": max_scroll,
+                "interactions_count": j.get("interactions_count", 1),
+                "last_seen": j["last_seen"].strftime("%b %d, %H:%M UTC") if j.get("last_seen") else "Just now",
+                "interest_badge": interest_badge,
+                "interest_class": interest_class
+            })
+
         return self.render('admin/analytics.html', 
                            total_visits=total_visits_count,
                            unique_visitors=unique_visitors_count,
                            avg_scroll_depth=avg_scroll_depth,
+                           recruiter_leads_count=recruiter_leads_count,
                            daily_labels=daily_labels,
                            daily_data=daily_data,
                            monthly_labels=monthly_labels,
                            monthly_data=monthly_data,
                            top_pages=top_pages_data,
-                           blog_likes=blog_likes_data)
+                           blog_likes=blog_likes_data,
+                           traffic_sources=traffic_sources,
+                           device_stats=device_stats,
+                           os_stats=os_stats,
+                           recent_journeys=recent_journeys)
 
 from flask_admin.menu import MenuLink
 
@@ -249,15 +369,24 @@ admin.add_view(BaseModelView(Language, name="Manage Languages", category="About 
 admin.add_view(BaseModelView(Achievement, name="Manage Achievements", category="About Me"))
 admin.add_view(BaseModelView(Certificate, name="Manage Certificates", category="About Me"))
 
-admin.add_view(BaseModelView(ProjectsPage, name="Page Settings", category="Projects"))
+admin.add_view(PageSettingsAdmin(ProjectsPage, name="Page Settings", category="Projects"))
 admin.add_view(ProjectAdmin(Project, name="Manage Projects", category="Projects"))
 
-admin.add_view(BaseModelView(BlogsPage, name="Page Settings", category="Blogs"))
+admin.add_view(PageSettingsAdmin(BlogsPage, name="Page Settings", category="Blogs"))
 admin.add_view(BlogAdmin(Blog, name="Manage Blogs", category="Blogs"))
 
-admin.add_view(BaseModelView(DiaryPage, name="Page Settings", category="My Diary"))
+admin.add_view(PageSettingsAdmin(DiaryPage, name="Page Settings", category="My Diary"))
 admin.add_view(DiaryAdmin(Diary, name="Manage My Diary", category="My Diary"))
 
+class ContactMessageAdmin(BaseModelView):
+    column_searchable_list = ("name", "email", "subject", "message")
+    column_filters = ("is_read", "subject")
+    column_default_sort = ("created_at", True)
+    can_create = False
+    can_edit = True
+    can_delete = True
+
+admin.add_view(ContactMessageAdmin(ContactMessage, name="Messages & Inquiries", category="General"))
 admin.add_view(BaseModelView(HomeCard, name="Manage Home Cards", category="General"))
 
 # --------------------------------------------------------------------
@@ -274,6 +403,7 @@ def project_to_dict(p):
         "hero_image": p.hero_image,
         "repo_url": p.repo_url,
         "live_url": p.live_url,
+        "category": p.category,
         "order": p.order
     }
 
@@ -337,6 +467,7 @@ def about_to_dict(a):
         "hero_image": a.hero_image,
         "whatsapp": a.whatsapp,
         "email": a.email,
+        "resume": a.resume,
         "skills": [skill_to_dict(s) for s in Skill.objects.order_by("order")],
         "interests": [interest_to_dict(i) for i in Interest.objects.order_by("order")],
         "tools": [tool_to_dict(t) for t in Tool.objects.order_by("order")],
@@ -479,8 +610,82 @@ def api_certificates():
 def api_about():
     about = About.objects.first()
     if not about:
-        return jsonify({"title": "About Me", "body": "", "hero_image": ""})
+        return jsonify({"title": "About Me", "body": "", "hero_image": "", "resume": ""})
     return jsonify(about_to_dict(about))
+
+@app.route("/api/download-resume")
+def api_download_resume():
+    import requests
+    import re
+    about = About.objects.first()
+    if not about or not about.resume:
+        abort(404, description="Resume not uploaded yet.")
+    
+    resume_url = about.resume.strip()
+    
+    # --- Convert cloud share links to direct download URLs ---
+    
+    # Google Drive: /file/d/FILE_ID/view -> /uc?export=download&id=FILE_ID
+    gdrive_match = re.search(r'drive\.google\.com/file/d/([a-zA-Z0-9_-]+)', resume_url)
+    if gdrive_match:
+        file_id = gdrive_match.group(1)
+        resume_url = f"https://drive.google.com/uc?export=download&id={file_id}&confirm=t"
+    
+    # Dropbox: ?dl=0 -> ?dl=1  (or www.dropbox -> dl.dropboxusercontent)
+    elif 'dropbox.com' in resume_url:
+        resume_url = re.sub(r'[?&]dl=0', '', resume_url)
+        if '?' in resume_url:
+            resume_url += '&dl=1'
+        else:
+            resume_url += '?dl=1'
+    
+    # OneDrive share link: convert to download link
+    elif '1drv.ms' in resume_url or 'onedrive.live.com' in resume_url:
+        # For 1drv.ms short links we just redirect; user should use direct link
+        pass
+    
+    # If it is a local relative URL, redirect directly
+    if not resume_url.startswith("http"):
+        return redirect(resume_url)
+    
+    # Determine file extension from original URL (before conversion)
+    original = about.resume.strip().lower()
+    if ".docx" in original:
+        ext = "docx"
+        mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    elif ".doc" in original:
+        ext = "doc"
+        mime = "application/msword"
+    else:
+        ext = "pdf"
+        mime = "application/pdf"
+    
+    filename = f"dipendra_resume.{ext}"
+    
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        }
+        response = requests.get(resume_url, stream=True, timeout=20, headers=headers, allow_redirects=True)
+        response.raise_for_status()
+        
+        # If the returned content is HTML (e.g. a viewer page), redirect instead
+        actual_content_type = response.headers.get('content-type', '')
+        if 'text/html' in actual_content_type:
+            # Fall back to a browser redirect so the user can manually download
+            return redirect(resume_url)
+        
+        from flask import Response
+        res = Response(
+            response.iter_content(chunk_size=8192),
+            content_type=mime,
+        )
+        res.headers["Content-Disposition"] = f'attachment; filename="{filename}"'
+        res.headers["Content-Length"] = response.headers.get("Content-Length", "")
+        return res
+    except Exception as e:
+        print(f"Error downloading resume: {e}")
+        return redirect(resume_url)
 
 @app.route("/api/blogs")
 def api_blogs():
@@ -570,19 +775,22 @@ def api_analytics():
     session_id = data.get("session_id")
     path = data.get("path")
     scroll_depth = data.get("scroll_depth", 0)
+    referrer = data.get("referrer") or "Direct / Bookmark"
+    device_type = data.get("device_type") or "Desktop"
+    browser = data.get("browser") or "Unknown"
+    os = data.get("os") or "Unknown"
+    screen_resolution = data.get("screen_resolution") or ""
     
     if not session_id or not path:
         return jsonify({"error": "Missing required fields (session_id or path)"}), 400
 
-    # Optional: Get IP and User Agent
-    ip_address = request.remote_addr
+    # Get client IP and User Agent
+    ip_address = request.headers.get("X-Forwarded-For", request.remote_addr)
+    if ip_address and "," in ip_address:
+        ip_address = ip_address.split(",")[0].strip()
     user_agent = request.headers.get("User-Agent")
 
-    # Save to database
-    # Check if we should update an existing event for this session and path within a short timeframe (e.g. 30 mins)
-    # For simplicity, we just create a new record for every significant update, or we update the last one.
-    # Let's try to update the highest scroll depth for the same session and path today
-    
+    # Update or create session visit event
     today_start = datetime.now(pytz.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     existing_event = VisitEvent.objects(
         session_id=session_id, 
@@ -594,22 +802,58 @@ def api_analytics():
         # Update scroll depth if it's higher
         if scroll_depth > existing_event.scroll_depth:
             existing_event.scroll_depth = scroll_depth
-            existing_event.timestamp = datetime.now(pytz.utc) # update timestamp to last interaction
-            existing_event.save()
-            return jsonify({"status": "updated sequence"}), 200
-        return jsonify({"status": "ignored lower scroll"}), 200
+        existing_event.timestamp = datetime.now(pytz.utc)
+        if referrer and existing_event.referrer == "Direct / Bookmark":
+            existing_event.referrer = referrer
+        existing_event.save()
+        return jsonify({"status": "updated sequence"}), 200
     else:
-        # Create new event
+        # Create new enriched event
         new_event = VisitEvent(
             session_id=session_id,
             path=path,
             ip_address=ip_address,
             user_agent=user_agent,
+            referrer=referrer,
+            device_type=device_type,
+            browser=browser,
+            os=os,
+            screen_resolution=screen_resolution,
             timestamp=datetime.now(pytz.utc),
             scroll_depth=scroll_depth
         )
         new_event.save()
         return jsonify({"status": "created"}), 201
+
+@app.route("/api/contact", methods=["POST"])
+def api_contact():
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+
+    name = (data.get("name") or "").strip()
+    email = (data.get("email") or "").strip()
+    subject = (data.get("subject") or "General Inquiry").strip()
+    message = (data.get("message") or "").strip()
+
+    if not name or not email or not message:
+        return jsonify({"error": "Name, email, and message are required."}), 400
+
+    # Basic email format check
+    if "@" not in email or "." not in email:
+        return jsonify({"error": "Please provide a valid email address."}), 400
+
+    contact = ContactMessage(
+        name=name,
+        email=email,
+        subject=subject,
+        message=message,
+        created_at=datetime.now(timezone.utc),
+        is_read=False
+    )
+    contact.save()
+
+    return jsonify({"status": "success", "message": "Your message has been sent successfully! I'll get back to you soon."}), 201
 
 # --------------------------------------------------------------------
 # SEO: Dynamic XML sitemap

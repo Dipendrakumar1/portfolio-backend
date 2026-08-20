@@ -2,145 +2,443 @@
 
 {% block head_tail %}{{ super() }}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.css">
+<style>
+    .analytics-container {
+        padding: 24px 20px;
+        color: #f1f5f9;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    
+    .analytics-card {
+        background: #1e293b;
+        border: 1px solid rgba(56, 189, 248, 0.18);
+        border-radius: 14px;
+        padding: 24px;
+        color: #f8fafc;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        transition: transform 0.2s ease, border-color 0.2s ease;
+        margin-bottom: 24px;
+        height: calc(100% - 24px);
+    }
+    
+    .analytics-card:hover {
+        border-color: rgba(56, 189, 248, 0.4);
+        transform: translateY(-2px);
+    }
+    
+    .metric-icon {
+        font-size: 1.8rem;
+        margin-bottom: 10px;
+    }
+    
+    .metric-title {
+        font-size: 0.85rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #94a3b8;
+        margin-bottom: 6px;
+    }
+    
+    .metric-value {
+        font-size: 2.2rem;
+        font-weight: 800;
+        color: #ffffff;
+        line-height: 1.1;
+        margin-bottom: 6px;
+    }
+    
+    .metric-sub {
+        font-size: 0.82rem;
+        color: #64748b;
+    }
+
+    .chart-wrapper {
+        position: relative;
+        height: 250px;
+        width: 100%;
+    }
+    
+    .source-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    
+    .source-item:last-child {
+        border-bottom: none;
+    }
+    
+    .source-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        background: rgba(56, 189, 248, 0.1);
+        border: 1px solid rgba(56, 189, 248, 0.25);
+        color: #38bdf8;
+    }
+    
+    .path-step {
+        display: inline-block;
+        padding: 3px 9px;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        background: #0f172a;
+        border: 1px solid #334155;
+        color: #e2e8f0;
+        margin: 2px 4px 2px 0;
+        font-family: monospace;
+    }
+    
+    .path-arrow {
+        color: #38bdf8;
+        font-weight: bold;
+        margin-right: 4px;
+    }
+    
+    .badge-intent-high {
+        background: rgba(244, 63, 94, 0.15);
+        color: #f43f5e;
+        border: 1px solid rgba(244, 63, 94, 0.4);
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 0.78rem;
+        display: inline-block;
+    }
+    
+    .badge-intent-engaged {
+        background: rgba(56, 189, 248, 0.15);
+        color: #38bdf8;
+        border: 1px solid rgba(56, 189, 248, 0.4);
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 0.78rem;
+        display: inline-block;
+    }
+    
+    .badge-intent-casual {
+        background: rgba(148, 163, 184, 0.12);
+        color: #94a3b8;
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.78rem;
+        display: inline-block;
+    }
+
+    .analytics-table {
+        width: 100%;
+        margin-bottom: 0;
+        color: #e2e8f0;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    
+    .analytics-table th {
+        background: rgba(15, 23, 42, 0.85);
+        color: #94a3b8;
+        border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 14px 18px;
+        font-weight: 700;
+    }
+    
+    .analytics-table td {
+        padding: 14px 18px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        vertical-align: middle;
+        color: #cbd5e1;
+        background: transparent;
+    }
+    
+    .analytics-table tbody tr:hover td {
+        background: rgba(56, 189, 248, 0.04);
+    }
+</style>
 {% endblock %}
 
 {% block body %}
-<div class="container-fluid" style="padding-top: 30px;">
+<div class="analytics-container">
     <!-- Header -->
-    <div class="row mb-5">
-        <div class="col-12">
-            <h2 class="text-gradient" style="font-weight: 700; font-size: 2.5rem; margin-bottom: 8px;">📊 Site Analytics</h2>
-            <p style="color: var(--text-secondary); margin: 0;">Monitor your website performance and visitor engagement</p>
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+        <div>
+            <h2 style="font-weight: 800; color: #ffffff; margin-bottom: 4px; letter-spacing: -0.02em;">
+                🎯 Recruiter & Visitor Intelligence
+            </h2>
+            <p style="color: #94a3b8; margin: 0; font-size: 0.95rem;">
+                Real-time tracking of visitor traffic origins, recruiter interest journeys, and portfolio engagement.
+            </p>
+        </div>
+        <div class="mt-2 mt-md-0">
+            <span style="background: rgba(52, 211, 153, 0.12); border: 1px solid #10b981; color: #34d399; padding: 7px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                <span style="width: 8px; height: 8px; border-radius: 50%; background: #34d399;"></span> Live Tracking Active
+            </span>
         </div>
     </div>
 
-    <!-- Summary Cards -->
-    <div class="row mb-5">
-        <div class="col-md-4 mb-4">
-            <div class="stats-card">
-                <div class="stats-icon" style="background: linear-gradient(135deg, #3b82f6, #2563eb); color: white;">
-                    👁️
+    <!-- 4 Key Metrics Cards -->
+    <div class="row">
+        <div class="col-lg-3 col-sm-6">
+            <div class="analytics-card">
+                <div class="metric-icon">👁️</div>
+                <div class="metric-title">Total Page Views</div>
+                <div class="metric-value" style="background: linear-gradient(135deg, #38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                    {{ total_visits }}
                 </div>
-                <div class="stats-label">Total Visits</div>
-                <div class="stats-value">{{ total_visits }}</div>
-                <div style="color: var(--text-secondary); font-size: 0.875rem;">All time page views</div>
+                <div class="metric-sub">Across all routes & articles</div>
             </div>
         </div>
-        <div class="col-md-4 mb-4">
-            <div class="stats-card">
-                <div class="stats-icon" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white;">
-                    👥
+        <div class="col-lg-3 col-sm-6">
+            <div class="analytics-card">
+                <div class="metric-icon">👥</div>
+                <div class="metric-title">Unique Visitors</div>
+                <div class="metric-value" style="color: #a78bfa;">
+                    {{ unique_visitors }}
                 </div>
-                <div class="stats-label">Unique Visitors</div>
-                <div class="stats-value">{{ unique_visitors }}</div>
-                <div style="color: var(--text-secondary); font-size: 0.875rem;">Distinct sessions</div>
+                <div class="metric-sub">Distinct browser sessions</div>
             </div>
         </div>
-        <div class="col-md-4 mb-4">
-            <div class="stats-card">
-                <div class="stats-icon" style="background: linear-gradient(135deg, #10b981, #059669); color: white;">
-                    📜
+        <div class="col-lg-3 col-sm-6">
+            <div class="analytics-card">
+                <div class="metric-icon">🎯</div>
+                <div class="metric-title">Recruiter Leads</div>
+                <div class="metric-value" style="color: #f43f5e;">
+                    {{ recruiter_leads_count }}
                 </div>
-                <div class="stats-label">Avg Scroll Depth</div>
-                <div class="stats-value">{{ avg_scroll_depth }}%</div>
-                <div style="color: var(--text-secondary); font-size: 0.875rem;">User engagement</div>
+                <div class="metric-sub">Explored /hire-me or /aboutme</div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-sm-6">
+            <div class="analytics-card">
+                <div class="metric-icon">📜</div>
+                <div class="metric-title">Avg Scroll Depth</div>
+                <div class="metric-value" style="color: #34d399;">
+                    {{ avg_scroll_depth }}%
+                </div>
+                <div class="metric-sub">Visitor engagement depth</div>
             </div>
         </div>
     </div>
 
-    <!-- Charts -->
-    <div class="row mb-5">
-        <div class="col-md-6 mb-4">
-            <div class="chart-container">
-                <h3>📈 Visits - Last 7 Days</h3>
-                <canvas id="dailyChart" height="250"></canvas>
+    <!-- Charts Row -->
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="analytics-card">
+                <h5 style="font-weight: 700; color: #fff; margin-bottom: 18px;">📈 Visits Trend (Last 7 Days)</h5>
+                <div class="chart-wrapper">
+                    <canvas id="dailyChart"></canvas>
+                </div>
             </div>
         </div>
-        <div class="col-md-6 mb-4">
-            <div class="chart-container">
-                <h3>📊 Visits - Last 6 Months</h3>
-                <canvas id="monthlyChart" height="250"></canvas>
+        <div class="col-lg-6">
+            <div class="analytics-card">
+                <h5 style="font-weight: 700; color: #fff; margin-bottom: 18px;">📊 Monthly Growth (Last 6 Months)</h5>
+                <div class="chart-wrapper">
+                    <canvas id="monthlyChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Top Pages Table -->
-    <div class="row mb-5">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h3 style="margin: 0; font-size: 1.25rem;">🔥 Top Pages</h3>
+    <!-- Traffic Origin & Devices Row -->
+    <div class="row">
+        <!-- Traffic Sources -->
+        <div class="col-lg-6">
+            <div class="analytics-card">
+                <h5 style="font-weight: 700; color: #fff; margin-bottom: 8px;">🌐 Traffic Sources / Referrers</h5>
+                <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 16px;">Where recruiters and visitors are arriving from:</p>
+                <div>
+                    {% for source in traffic_sources %}
+                    <div class="source-item">
+                        <span class="source-tag">
+                            {% if 'LinkedIn' in source.name %}💼{% elif 'GitHub' in source.name %}🐙{% elif 'Google' in source.name %}🔍{% elif 'Twitter' in source.name or 'X' in source.name %}🐦{% else %}🔗{% endif %}
+                            {{ source.name }}
+                        </span>
+                        <span style="font-weight: 700; color: #fff; font-size: 0.9rem;">{{ source.count }} visits</span>
+                    </div>
+                    {% else %}
+                    <p style="color: #64748b; margin: 0;">No traffic source data recorded yet.</p>
+                    {% endfor %}
                 </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th style="width: 70%;">Page Path</th>
-                                    <th style="width: 30%;">Total Views</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for page in top_pages %}
-                                <tr>
-                                    <td><code style="background: rgba(59, 130, 246, 0.1); padding: 4px 8px; border-radius: 4px; color: var(--primary-color);">{{ page.path }}</code></td>
-                                    <td>
-                                        <span class="badge badge-primary">{{ page.views }}</span>
-                                    </td>
-                                </tr>
-                                {% else %}
-                                <tr>
-                                    <td colspan="2" class="text-center" style="padding: 40px; color: var(--text-secondary);">
-                                        No data available yet. Start tracking to see analytics here.
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+            </div>
+        </div>
+
+        <!-- Devices & Operating Systems -->
+        <div class="col-lg-6">
+            <div class="analytics-card">
+                <h5 style="font-weight: 700; color: #fff; margin-bottom: 8px;">📱 Device & Environment Breakdown</h5>
+                <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 16px;">Platform and hardware breakdown:</p>
+                <div class="row">
+                    <div class="col-sm-6 mb-3 mb-sm-0">
+                        <h6 style="color: #38bdf8; font-weight: 700; font-size: 0.8rem; text-transform: uppercase; margin-bottom: 12px;">Device Types</h6>
+                        {% for d in device_stats %}
+                        <div class="d-flex justify-content-between py-1" style="font-size: 0.88rem; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <span style="color: #cbd5e1;">{{ d.name }}</span>
+                            <span style="font-weight: 700; color: #fff;">{{ d.count }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="col-sm-6">
+                        <h6 style="color: #a78bfa; font-weight: 700; font-size: 0.8rem; text-transform: uppercase; margin-bottom: 12px;">Operating Systems</h6>
+                        {% for o in os_stats %}
+                        <div class="d-flex justify-content-between py-1" style="font-size: 0.88rem; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <span style="color: #cbd5e1;">{{ o.name }}</span>
+                            <span style="font-weight: 700; color: #fff;">{{ o.count }}</span>
+                        </div>
+                        {% endfor %}
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Blog Likes Table -->
-    <div class="row mb-5">
+    <!-- Live Visitor / Recruiter Journey Log Table -->
+    <div class="row">
         <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h3 style="margin: 0; font-size: 1.25rem;">❤️ Blog Likes</h3>
+            <div class="analytics-card" style="padding: 0; overflow: hidden;">
+                <div style="padding: 20px 24px; border-bottom: 1px solid rgba(56, 189, 248, 0.15); background: rgba(15, 23, 42, 0.6);">
+                    <h5 style="font-weight: 800; color: #fff; margin: 0 0 4px 0;">
+                        🕵️ Recent Visitor & Recruiter Journeys (Last 25 Sessions)
+                    </h5>
+                    <small style="color: #94a3b8;">Detailed navigation path, device environment, and engagement depth per session.</small>
                 </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th style="width: 70%;">Blog Slug</th>
-                                    <th style="width: 30%;">Total Likes</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for like in blog_likes %}
-                                <tr>
-                                    <td><code style="background: rgba(239, 68, 68, 0.1); padding: 4px 8px; border-radius: 4px; color: #f43f5e;">{{ like.slug }}</code></td>
-                                    <td>
-                                        <span class="badge badge-danger">{{ like.count }}</span>
-                                    </td>
-                                </tr>
-                                {% else %}
-                                <tr>
-                                    <td colspan="2" class="text-center" style="padding: 40px; color: var(--text-secondary);">
-                                        No likes recorded yet. Share your blog posts to get more engagement!
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
+                <div class="table-responsive">
+                    <table class="analytics-table">
+                        <thead>
+                            <tr>
+                                <th>Intent Level</th>
+                                <th>Source / Referrer</th>
+                                <th>Device & OS</th>
+                                <th>Journey / Pages Visited</th>
+                                <th>Max Scroll</th>
+                                <th>Last Active</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for j in recent_journeys %}
+                            <tr>
+                                <td>
+                                    {% if 'High' in j.interest_badge %}
+                                    <span class="badge-intent-high">{{ j.interest_badge }}</span>
+                                    {% elif 'Engaged' in j.interest_badge %}
+                                    <span class="badge-intent-engaged">{{ j.interest_badge }}</span>
+                                    {% else %}
+                                    <span class="badge-intent-casual">{{ j.interest_badge }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span style="font-weight: 600; color: #38bdf8;">{{ j.referrer }}</span>
+                                </td>
+                                <td>
+                                    <div style="font-size: 0.88rem; font-weight: 600; color: #fff;">{{ j.device_type }} ({{ j.os }})</div>
+                                    <small style="color: #64748b;">{{ j.browser }} • {{ j.screen_resolution }}</small>
+                                </td>
+                                <td>
+                                    <div style="display: flex; flex-wrap: wrap; align-items: center;">
+                                        {% for p in j.paths %}
+                                        <span class="path-step">{{ p }}</span>
+                                        {% if not loop.last %}<span class="path-arrow">→</span>{% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <div class="progress" style="width: 55px; height: 6px; background: #334155; border-radius: 10px; margin: 0;">
+                                            <div class="progress-bar" style="width: {{ j.max_scroll }}%; background: {% if j.max_scroll >= 70 %}#10b981{% elif j.max_scroll >= 40 %}#38bdf8{% else %}#94a3b8{% endif %};"></div>
+                                        </div>
+                                        <span style="font-weight: 700; font-size: 0.85rem; color: #fff;">{{ j.max_scroll }}%</span>
+                                    </div>
+                                </td>
+                                <td style="font-size: 0.85rem; color: #94a3b8; white-space: nowrap;">
+                                    {{ j.last_seen }}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center py-4" style="color: #64748b;">
+                                    No visitor session journeys recorded yet.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Top Pages & Likes Row -->
+    <div class="row">
+        <!-- Top Pages Table -->
+        <div class="col-lg-6">
+            <div class="analytics-card" style="padding: 0; overflow: hidden;">
+                <div style="padding: 18px 24px; border-bottom: 1px solid rgba(56, 189, 248, 0.15); background: rgba(15, 23, 42, 0.6);">
+                    <h5 style="font-weight: 700; color: #fff; margin: 0;">🔥 Top Visited Pages</h5>
+                </div>
+                <div class="table-responsive">
+                    <table class="analytics-table">
+                        <thead>
+                            <tr>
+                                <th>Page Path</th>
+                                <th style="text-align: right;">Total Views</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for page in top_pages %}
+                            <tr>
+                                <td><code style="background: rgba(56, 189, 248, 0.1); padding: 4px 8px; border-radius: 4px; color: #38bdf8;">{{ page.path }}</code></td>
+                                <td style="text-align: right;"><span class="badge" style="background: #3b82f6; color: #fff; padding: 5px 10px; font-size: 0.85rem;">{{ page.views }}</span></td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="2" class="text-center text-muted py-3">No page view data yet.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Blog Likes Table -->
+        <div class="col-lg-6">
+            <div class="analytics-card" style="padding: 0; overflow: hidden;">
+                <div style="padding: 18px 24px; border-bottom: 1px solid rgba(56, 189, 248, 0.15); background: rgba(15, 23, 42, 0.6);">
+                    <h5 style="font-weight: 700; color: #fff; margin: 0;">❤️ Blog Likes & Reactions</h5>
+                </div>
+                <div class="table-responsive">
+                    <table class="analytics-table">
+                        <thead>
+                            <tr>
+                                <th>Blog Post Slug</th>
+                                <th style="text-align: right;">Total Likes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for like in blog_likes %}
+                            <tr>
+                                <td><code style="background: rgba(244, 63, 94, 0.1); padding: 4px 8px; border-radius: 4px; color: #f43f5e;">{{ like.slug }}</code></td>
+                                <td style="text-align: right;"><span class="badge" style="background: #f43f5e; color: #fff; padding: 5px 10px; font-size: 0.85rem;">{{ like.count }}</span></td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="2" class="text-center text-muted py-3">No likes recorded yet.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block tail %}{{ super() }}
@@ -157,12 +455,11 @@
     document.addEventListener("DOMContentLoaded", function () {
         const chartData = JSON.parse(document.getElementById('chart-data').textContent);
 
-        // Modern chart defaults
         Chart.defaults.color = '#94a3b8';
-        Chart.defaults.borderColor = 'rgba(51, 65, 85, 0.5)';
+        Chart.defaults.borderColor = 'rgba(51, 65, 85, 0.4)';
         Chart.defaults.font.family = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 
-        // Daily Chart - Modern Line Chart
+        // Daily Chart
         const ctxDaily = document.getElementById('dailyChart').getContext('2d');
         new Chart(ctxDaily, {
             type: 'line',
@@ -171,59 +468,48 @@
                 datasets: [{
                     label: 'Visits',
                     data: chartData.dailyData,
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                    borderColor: 'rgba(59, 130, 246, 1)',
+                    backgroundColor: 'rgba(56, 189, 248, 0.12)',
+                    borderColor: '#38bdf8',
                     borderWidth: 3,
                     tension: 0.4,
                     fill: true,
-                    pointBackgroundColor: '#3b82f6',
+                    pointBackgroundColor: '#38bdf8',
                     pointBorderColor: '#fff',
                     pointBorderWidth: 2,
-                    pointRadius: 5,
-                    pointHoverRadius: 7
+                    pointRadius: 4,
+                    pointHoverRadius: 6
                 }]
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: true,
+                maintainAspectRatio: false,
                 plugins: {
-                    legend: {
-                        display: false
-                    },
+                    legend: { display: false },
                     tooltip: {
-                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                        titleColor: '#f1f5f9',
-                        bodyColor: '#94a3b8',
-                        borderColor: 'rgba(59, 130, 246, 0.5)',
+                        backgroundColor: '#0f172a',
+                        titleColor: '#f8fafc',
+                        bodyColor: '#38bdf8',
+                        borderColor: 'rgba(56, 189, 248, 0.4)',
                         borderWidth: 1,
-                        padding: 12,
+                        padding: 10,
                         cornerRadius: 8
                     }
                 },
                 scales: {
                     y: {
                         beginAtZero: true,
-                        ticks: {
-                            precision: 0,
-                            color: '#94a3b8'
-                        },
-                        grid: {
-                            color: 'rgba(51, 65, 85, 0.3)'
-                        }
+                        ticks: { precision: 0, color: '#94a3b8' },
+                        grid: { color: 'rgba(51, 65, 85, 0.3)' }
                     },
                     x: {
-                        ticks: {
-                            color: '#94a3b8'
-                        },
-                        grid: {
-                            display: false
-                        }
+                        ticks: { color: '#94a3b8' },
+                        grid: { display: false }
                     }
                 }
             }
         });
 
-        // Monthly Chart - Modern Bar Chart
+        // Monthly Chart
         const ctxMonthly = document.getElementById('monthlyChart').getContext('2d');
         new Chart(ctxMonthly, {
             type: 'bar',
@@ -232,48 +518,37 @@
                 datasets: [{
                     label: 'Visits',
                     data: chartData.monthlyData,
-                    backgroundColor: 'rgba(139, 92, 246, 0.6)',
-                    borderColor: 'rgba(139, 92, 246, 1)',
+                    backgroundColor: 'rgba(167, 139, 250, 0.65)',
+                    borderColor: '#a78bfa',
                     borderWidth: 2,
-                    borderRadius: 8,
+                    borderRadius: 6,
                     borderSkipped: false
                 }]
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: true,
+                maintainAspectRatio: false,
                 plugins: {
-                    legend: {
-                        display: false
-                    },
+                    legend: { display: false },
                     tooltip: {
-                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                        titleColor: '#f1f5f9',
-                        bodyColor: '#94a3b8',
-                        borderColor: 'rgba(139, 92, 246, 0.5)',
+                        backgroundColor: '#0f172a',
+                        titleColor: '#f8fafc',
+                        bodyColor: '#a78bfa',
+                        borderColor: 'rgba(167, 139, 250, 0.4)',
                         borderWidth: 1,
-                        padding: 12,
+                        padding: 10,
                         cornerRadius: 8
                     }
                 },
                 scales: {
                     y: {
                         beginAtZero: true,
-                        ticks: {
-                            precision: 0,
-                            color: '#94a3b8'
-                        },
-                        grid: {
-                            color: 'rgba(51, 65, 85, 0.3)'
-                        }
+                        ticks: { precision: 0, color: '#94a3b8' },
+                        grid: { color: 'rgba(51, 65, 85, 0.3)' }
                     },
                     x: {
-                        ticks: {
-                            color: '#94a3b8'
-                        },
-                        grid: {
-                            display: false
-                        }
+                        ticks: { color: '#94a3b8' },
+                        grid: { display: false }
                     }
                 }
             }

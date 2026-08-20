@@ -40,6 +40,7 @@ def seed_data():
             "hero_image": "img/project-wae.jpg",
             "repo_url": "https://github.com/yourname/wae",
             "live_url": "#",
+            "category": "Personal",
             "order": 1
         },
         {
@@ -48,6 +49,7 @@ def seed_data():
             "short_description": "Raft based Distributed Consensus enabled datastore",
             "long_description": "Implementation of Raft consensus algorithm for a distributed datastore.",
             "repo_url": "https://github.com/yourname/raft",
+            "category": "Personal",
             "order": 2
         },
         {
@@ -55,6 +57,7 @@ def seed_data():
             "title": "Universal CI/CD pipeline manager",
             "short_description": "Manage CI/CD pipelines universally.",
             "repo_url": "https://github.com/yourname/cicd",
+            "category": "Real Client",
             "order": 3
         }
     ]
