@@ -39,7 +39,7 @@ def load_user(user_id):
 db.init_app(app)
 
 # CORS configuration: Restrict to specific origins
-frontend_url = os.getenv("FRONTEND_URL", "https://www.dipendrakumaryadav.com.np")
+frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
 CORS(app, origins=[frontend_url])
 
 try:
@@ -615,7 +615,6 @@ def api_about():
 
 @app.route("/api/download-resume")
 def api_download_resume():
-    import requests
     import re
     about = About.objects.first()
     if not about or not about.resume:
@@ -623,69 +622,25 @@ def api_download_resume():
     
     resume_url = about.resume.strip()
     
-    # --- Convert cloud share links to direct download URLs ---
-    
-    # Google Drive: /file/d/FILE_ID/view -> /uc?export=download&id=FILE_ID
-    gdrive_match = re.search(r'drive\.google\.com/file/d/([a-zA-Z0-9_-]+)', resume_url)
+    # 1. Google Drive: convert view/sharing link to direct download link
+    # Matches: /file/d/FILE_ID/view, /open?id=FILE_ID, /uc?id=FILE_ID
+    gdrive_match = re.search(r'drive\.google\.com/(?:file/d/|open\?id=|uc\?id=)?([a-zA-Z0-9_-]{25,})', resume_url)
     if gdrive_match:
         file_id = gdrive_match.group(1)
-        resume_url = f"https://drive.google.com/uc?export=download&id={file_id}&confirm=t"
+        direct_url = f"https://drive.google.com/uc?export=download&id={file_id}"
+        return redirect(direct_url, code=302)
     
-    # Dropbox: ?dl=0 -> ?dl=1  (or www.dropbox -> dl.dropboxusercontent)
-    elif 'dropbox.com' in resume_url:
-        resume_url = re.sub(r'[?&]dl=0', '', resume_url)
-        if '?' in resume_url:
-            resume_url += '&dl=1'
+    # 2. Dropbox: convert dl=0 preview link to dl=1 direct download
+    if 'dropbox.com' in resume_url:
+        direct_url = re.sub(r'[?&]dl=0', '', resume_url)
+        if '?' in direct_url:
+            direct_url += '&dl=1'
         else:
-            resume_url += '?dl=1'
+            direct_url += '?dl=1'
+        return redirect(direct_url, code=302)
     
-    # OneDrive share link: convert to download link
-    elif '1drv.ms' in resume_url or 'onedrive.live.com' in resume_url:
-        # For 1drv.ms short links we just redirect; user should use direct link
-        pass
-    
-    # If it is a local relative URL, redirect directly
-    if not resume_url.startswith("http"):
-        return redirect(resume_url)
-    
-    # Determine file extension from original URL (before conversion)
-    original = about.resume.strip().lower()
-    if ".docx" in original:
-        ext = "docx"
-        mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    elif ".doc" in original:
-        ext = "doc"
-        mime = "application/msword"
-    else:
-        ext = "pdf"
-        mime = "application/pdf"
-    
-    filename = f"dipendra_resume.{ext}"
-    
-    try:
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        }
-        response = requests.get(resume_url, stream=True, timeout=20, headers=headers, allow_redirects=True)
-        response.raise_for_status()
-        
-        # If the returned content is HTML (e.g. a viewer page), redirect instead
-        actual_content_type = response.headers.get('content-type', '')
-        if 'text/html' in actual_content_type:
-            # Fall back to a browser redirect so the user can manually download
-            return redirect(resume_url)
-        
-        from flask import Response
-        res = Response(
-            response.iter_content(chunk_size=8192),
-            content_type=mime,
-        )
-        res.headers["Content-Disposition"] = f'attachment; filename="{filename}"'
-        res.headers["Content-Length"] = response.headers.get("Content-Length", "")
-        return res
-    except Exception as e:
-        print(f"Error downloading resume: {e}")
-        return redirect(resume_url)
+    # 3. Direct PDF/DOCX or cloud URL (Cloudinary, AWS S3, local, etc.)
+    return redirect(resume_url, code=302)
 
 @app.route("/api/blogs")
 def api_blogs():
