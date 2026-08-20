@@ -39,7 +39,7 @@ def load_user(user_id):
 db.init_app(app)
 
 # CORS configuration: Restrict to specific origins
-frontend_url = os.getenv("FRONTEND_URL", "//www.dipendrakumaryadav.com.np")
+frontend_url = os.getenv("FRONTEND_URL", "https://www.dipendrakumaryadav.com.np")
 CORS(app, origins=[frontend_url])
 
 try:
