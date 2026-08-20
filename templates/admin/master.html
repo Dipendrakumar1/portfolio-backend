@@ -95,16 +95,21 @@
                 placeholder: 'Write your rich formatted content here...',
             });
 
-            // Set initial content from textarea
+            // Set initial content from textarea without losing any HTML
             var existingContent = el.value || '';
             if (existingContent) {
-                quill.clipboard.dangerouslyPasteHTML(existingContent);
+                quill.root.innerHTML = existingContent;
             }
 
-            // On form submit, sync Quill HTML content back to textarea
+            // Real-time synchronization to textarea
+            quill.on('text-change', function () {
+                el.value = quill.root.innerHTML;
+            });
+
+            // On form submit, ensure final sync
             if (form) {
                 form.addEventListener('submit', function () {
-                    el.value = quill.root.innerHTML || '';
+                    el.value = quill.root.innerHTML;
                 });
             }
         });
