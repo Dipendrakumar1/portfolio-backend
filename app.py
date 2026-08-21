@@ -13,6 +13,7 @@ from config import Config
 from models import db, Project, Diary, DiarySection, DiaryBullet, Certificate, About, Blog, HomeCard, User, Experience, Skill, Interest, Tool, Language, Achievement, ProjectsPage, BlogsPage, DiaryPage, VisitEvent, LikeEvent, ContactMessage
 from datetime import datetime, timedelta, timezone
 import pytz
+import requests
 from flask_admin import BaseView
 
 # --------------------------------------------------------------------
@@ -476,6 +477,14 @@ def about_to_dict(a):
         "experiences": [experience_to_dict(e) for e in Experience.objects.order_by("order")],
     }
 
+
+def is_placeholder_value(value):
+    if value is None:
+        return True
+    cleaned = str(value).strip().lower()
+    return not cleaned or cleaned.startswith("your-") or cleaned in {"changeme", "replace-me", "example"}
+
+
 def home_card_to_dict(c):
     return {
         "id": str(c.id),
@@ -615,7 +624,6 @@ def api_about():
 
 @app.route("/api/download-resume")
 def api_download_resume():
-    import urllib.request
     import re
     about = About.objects.first()
     if not about or not about.resume:
@@ -623,59 +631,25 @@ def api_download_resume():
     
     resume_url = about.resume.strip()
     
-    # Determine custom filename
-    original = about.resume.strip().lower()
-    ext = "pdf"
-    if ".docx" in original:
-        ext = "docx"
-        mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    elif ".doc" in original:
-        ext = "doc"
-        mime = "application/msword"
-    else:
-        ext = "pdf"
-        mime = "application/pdf"
-    filename = f"dipendra_resume.{ext}"
-    
-    # 1. Google Drive: convert view link to direct download link
+    # 1. Google Drive: convert view/sharing link to direct download link
+    # Matches: /file/d/FILE_ID/view, /open?id=FILE_ID, /uc?id=FILE_ID
     gdrive_match = re.search(r'drive\.google\.com/(?:file/d/|open\?id=|uc\?id=)?([a-zA-Z0-9_-]{25,})', resume_url)
     if gdrive_match:
         file_id = gdrive_match.group(1)
-        resume_url = f"https://drive.google.com/uc?export=download&id={file_id}&confirm=t"
+        direct_url = f"https://drive.google.com/uc?export=download&id={file_id}"
+        return redirect(direct_url, code=302)
     
     # 2. Dropbox: convert dl=0 preview link to dl=1 direct download
-    elif 'dropbox.com' in resume_url:
-        resume_url = re.sub(r'[?&]dl=0', '', resume_url)
-        if '?' in resume_url:
-            resume_url += '&dl=1'
+    if 'dropbox.com' in resume_url:
+        direct_url = re.sub(r'[?&]dl=0', '', resume_url)
+        if '?' in direct_url:
+            direct_url += '&dl=1'
         else:
-            resume_url += '?dl=1'
-            
-    # If it's a local relative path, redirect directly
-    if not resume_url.startswith("http"):
-        return redirect(resume_url, code=302)
-        
-    try:
-        req = urllib.request.Request(
-            resume_url,
-            headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-            }
-        )
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            content_type = resp.headers.get_content_type()
-            # If Google Drive returns HTML (e.g. large file scan warning page), redirect directly
-            if 'text/html' in content_type:
-                return redirect(resume_url, code=302)
-                
-            file_data = resp.read()
-            from flask import Response
-            res = Response(file_data, mimetype=mime)
-            res.headers["Content-Disposition"] = f'attachment; filename="{filename}"'
-            return res
-    except Exception as e:
-        print(f"Resume proxy fallback to redirect: {e}")
-        return redirect(resume_url, code=302)
+            direct_url += '?dl=1'
+        return redirect(direct_url, code=302)
+    
+    # 3. Direct PDF/DOCX or cloud URL (Cloudinary, AWS S3, local, etc.)
+    return redirect(resume_url, code=302)
 
 @app.route("/api/blogs")
 def api_blogs():
@@ -825,6 +799,7 @@ def api_contact():
     email = (data.get("email") or "").strip()
     subject = (data.get("subject") or "General Inquiry").strip()
     message = (data.get("message") or "").strip()
+    captcha_token = (data.get("captchaToken") or "").strip()
 
     if not name or not email or not message:
         return jsonify({"error": "Name, email, and message are required."}), 400
@@ -832,6 +807,27 @@ def api_contact():
     # Basic email format check
     if "@" not in email or "." not in email:
         return jsonify({"error": "Please provide a valid email address."}), 400
+
+    recaptcha_secret = (Config.RECAPTCHA_SECRET_KEY or "").strip()
+    if recaptcha_secret and not is_placeholder_value(recaptcha_secret):
+        if not captcha_token:
+            return jsonify({"error": "Please complete the captcha verification before submitting."}), 400
+
+        try:
+            verify_response = requests.post(
+                "https://www.google.com/recaptcha/api/siteverify",
+                data={
+                    "secret": recaptcha_secret,
+                    "response": captcha_token,
+                },
+                timeout=10,
+            )
+            verify_response.raise_for_status()
+            verification = verify_response.json()
+            if not verification.get("success"):
+                return jsonify({"error": "Captcha verification failed. Please try again."}), 400
+        except Exception:
+            return jsonify({"error": "Captcha verification could not be completed. Please try again."}), 400
 
     contact = ContactMessage(
         name=name,
