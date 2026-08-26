@@ -22,6 +22,10 @@ FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")  # Frontend or
 # Google reCAPTCHA v2
 RECAPTCHA_SECRET_KEY = os.getenv("RECAPTCHA_SECRET_KEY", "").strip()
 
+# Public profile handles used by the About page activity graphs
+GITHUB_USERNAME = os.getenv("GITHUB_USERNAME", "Dipendrakumar1").strip()
+LEETCODE_USERNAME = os.getenv("LEETCODE_USERNAME", "dipendra1234").strip()
+
 # Environment
 FLASK_ENV = os.getenv("FLASK_ENV", "production")  # Set to "development" for debug mode
 
@@ -32,6 +36,8 @@ class Config:
     FLASK_ADMIN_SWATCH = 'slate'
     SECRET_KEY = SECRET_KEY
     RECAPTCHA_SECRET_KEY = RECAPTCHA_SECRET_KEY
+    GITHUB_USERNAME = GITHUB_USERNAME
+    LEETCODE_USERNAME = LEETCODE_USERNAME
     
     @staticmethod
     def validate():

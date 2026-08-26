@@ -1,4 +1,5 @@
 import os
+import json
 from flask import Flask, jsonify, abort, render_template, redirect, url_for, request, flash, Response
 from flask_admin import Admin, AdminIndexView, expose
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
@@ -10,7 +11,7 @@ from wtforms.widgets import TextArea
 from html import escape
 
 from config import Config
-from models import db, Project, Diary, DiarySection, DiaryBullet, Certificate, About, Blog, HomeCard, User, Experience, Skill, Interest, Tool, Language, Achievement, ProjectsPage, BlogsPage, DiaryPage, VisitEvent, LikeEvent, ContactMessage
+from models import db, Project, Diary, DiarySection, DiaryBullet, Certificate, About, Blog, HomeCard, ProfileHighlight, Testimonial, User, Experience, Skill, Interest, Tool, Language, Achievement, ProjectsPage, BlogsPage, DiaryPage, VisitEvent, LikeEvent, ContactMessage
 from datetime import datetime, timedelta, timezone
 import pytz
 import requests
@@ -100,6 +101,9 @@ class BaseModelView(ModelView):
     page_size = 20
     create_modal = True
     edit_modal = True
+    form_overrides = {
+        "details": TextAreaField,
+    }
 
 class ProjectAdmin(BaseModelView):
     column_searchable_list = ("title", "slug", "short_description")
@@ -112,11 +116,19 @@ class ProjectAdmin(BaseModelView):
     edit_modal = False
     form_overrides = {
         "long_description": TextAreaField,
+        "problem": TextAreaField,
+        "solution": TextAreaField,
+        "technologies": TextAreaField,
+        "outcomes": TextAreaField,
     }
     form_widget_args = {
         "long_description": {
             "class": "quill-editor",
         },
+        "problem": {"class": "quill-editor"},
+        "solution": {"class": "quill-editor"},
+        "technologies": {"class": "quill-editor"},
+        "outcomes": {"class": "quill-editor"},
     }
 
 class BlogAdmin(BaseModelView):
@@ -389,6 +401,8 @@ class ContactMessageAdmin(BaseModelView):
 
 admin.add_view(ContactMessageAdmin(ContactMessage, name="Messages & Inquiries", category="General"))
 admin.add_view(BaseModelView(HomeCard, name="Manage Home Cards", category="General"))
+admin.add_view(BaseModelView(ProfileHighlight, name="Manage Profile Highlights", category="General"))
+admin.add_view(BaseModelView(Testimonial, name="Manage Testimonials", category="General"))
 
 # --------------------------------------------------------------------
 # Helper serializers
@@ -401,6 +415,12 @@ def project_to_dict(p):
         "title": p.title,
         "short_description": p.short_description,
         "long_description": p.long_description or "",
+        "problem": p.problem or "",
+        "solution": p.solution or "",
+        "role": p.role or "",
+        "technologies": p.technologies or "",
+        "outcomes": p.outcomes or "",
+        "screenshots": p.screenshots or [],
         "hero_image": p.hero_image,
         "repo_url": p.repo_url,
         "live_url": p.live_url,
@@ -439,6 +459,7 @@ def certificate_to_dict(c):
     return {
         "id": str(c.id),
         "name": c.name,
+        "details": c.details or "",
         "image_url": c.image_url,
         "link_url": c.link_url,
         "order": c.order
@@ -495,10 +516,21 @@ def home_card_to_dict(c):
         "order": c.order
     }
 
+def profile_highlight_to_dict(h):
+    return {"id": str(h.id), "label": h.label, "value": h.value, "description": h.description or "", "order": h.order}
+
+def testimonial_to_dict(t):
+    return {
+        "id": str(t.id), "quote": t.quote, "name": t.name, "role": t.role or "",
+        "company": t.company or "", "avatar_url": t.avatar_url or "",
+        "linkedin_url": t.linkedin_url or "", "order": t.order,
+    }
+
 def experience_to_dict(e):
     return {
         "id": str(e.id),
         "company_name": e.company_name,
+        "details": e.details or "",
         "company_logo": e.company_logo,
         "role": e.role,
         "tenure": e.tenure,
@@ -510,6 +542,7 @@ def skill_to_dict(s):
     return {
         "id": str(s.id),
         "name": s.name,
+        "details": s.details or "",
         "category": s.category,
         "level": s.level,
         "order": s.order
@@ -519,6 +552,7 @@ def interest_to_dict(i):
     return {
         "id": str(i.id),
         "name": i.name,
+        "details": i.details or "",
         "order": i.order
     }
 
@@ -526,6 +560,7 @@ def tool_to_dict(t):
     return {
         "id": str(t.id),
         "name": t.name,
+        "details": t.details or "",
         "icon_url": t.icon_url,
         "order": t.order
     }
@@ -534,6 +569,7 @@ def language_to_dict(l):
     return {
         "id": str(l.id),
         "name": l.name,
+        "details": l.details or "",
         "level": l.level,
         "order": l.order
     }
@@ -542,9 +578,99 @@ def achievement_to_dict(a):
     return {
         "id": str(a.id),
         "title": a.title,
+        "details": a.details or "",
         "description": a.description,
         "date": a.date.isoformat() if a.date else None,
         "order": a.order
+    }
+
+def get_github_activity(username):
+    if not username:
+        return {"configured": False, "username": "", "days": [], "stats": {}}
+
+    response = requests.get(
+        f"https://api.github.com/users/{username}/events/public",
+        params={"per_page": 100},
+        headers={"Accept": "application/vnd.github+json", "User-Agent": "portfolio-activity-graph"},
+        timeout=10,
+    )
+    response.raise_for_status()
+    profile_response = requests.get(
+        f"https://api.github.com/users/{username}",
+        headers={"Accept": "application/vnd.github+json", "User-Agent": "portfolio-activity-graph"},
+        timeout=10,
+    )
+    profile_response.raise_for_status()
+
+    today = datetime.now(timezone.utc).date()
+    counts = {today - timedelta(days=index): 0 for index in range(364, -1, -1)}
+    for event in response.json():
+        created_at = event.get("created_at")
+        if not created_at:
+            continue
+        event_date = datetime.fromisoformat(created_at.replace("Z", "+00:00")).date()
+        if event_date in counts:
+            counts[event_date] += 1
+
+    profile = profile_response.json()
+    return {
+        "configured": True,
+        "username": username,
+        "days": [{"date": day.isoformat(), "count": count} for day, count in counts.items()],
+        "stats": {"public_repos": profile.get("public_repos", 0), "followers": profile.get("followers", 0)},
+    }
+
+def get_leetcode_activity(username):
+    if not username:
+        return {"configured": False, "username": "", "days": [], "solved": []}
+
+    query = """
+        query UserStats($username: String!) {
+      matchedUser(username: $username) {
+        username
+        submitStatsGlobal {
+          acSubmissionNum { difficulty count }
+        }
+                userCalendar {
+                    submissionCalendar
+                }
+      }
+    }
+    """
+    response = requests.post(
+        "https://leetcode.com/graphql",
+        json={"query": query, "variables": {"username": username}},
+        headers={"Content-Type": "application/json", "User-Agent": "portfolio-activity-graph"},
+        timeout=10,
+    )
+    response.raise_for_status()
+    matched_user = (response.json().get("data") or {}).get("matchedUser")
+    if not matched_user:
+        raise ValueError("LeetCode user was not found")
+
+    calendar = matched_user.get("userCalendar", {}).get("submissionCalendar", "{}")
+    try:
+        calendar = json.loads(calendar) if isinstance(calendar, str) else calendar
+    except json.JSONDecodeError:
+        calendar = {}
+
+    today = datetime.now(timezone.utc).date()
+    counts = {today - timedelta(days=index): 0 for index in range(364, -1, -1)}
+    for timestamp, count in calendar.items():
+        activity_date = datetime.fromtimestamp(int(timestamp), timezone.utc).date()
+        if activity_date in counts:
+            counts[activity_date] = count
+
+    solved = [
+        {"difficulty": item.get("difficulty"), "count": item.get("count", 0)}
+        for item in matched_user.get("submitStatsGlobal", {}).get("acSubmissionNum", [])
+        if item.get("difficulty") in {"Easy", "Medium", "Hard"}
+    ]
+    return {
+        "configured": True,
+        "username": username,
+        "days": [{"date": day.isoformat(), "count": count} for day, count in counts.items()],
+        "solved": solved,
     }
 
 # --------------------------------------------------------------------
@@ -667,6 +793,18 @@ def api_home_cards():
     cards = HomeCard.objects.order_by("order")
     return jsonify([home_card_to_dict(c) for c in cards])
 
+@app.route("/api/site-stats")
+def api_site_stats():
+    return jsonify({
+        "projects_delivered": Project.objects.count(),
+        "highlights": [profile_highlight_to_dict(h) for h in ProfileHighlight.objects.order_by("order")],
+    })
+
+@app.route("/api/testimonials")
+def api_testimonials():
+    testimonials = Testimonial.objects.order_by("order")
+    return jsonify([testimonial_to_dict(t) for t in testimonials])
+
 @app.route("/api/experiences")
 def api_experiences():
     experiences = Experience.objects.order_by("order")
@@ -696,6 +834,22 @@ def api_languages():
 def api_achievements():
     achievements = Achievement.objects.order_by("order")
     return jsonify([achievement_to_dict(a) for a in achievements])
+
+@app.route("/api/activity-stats")
+def api_activity_stats():
+    result = {
+        "github": {"configured": False, "username": "", "days": [], "stats": {}},
+        "leetcode": {"configured": False, "username": "", "solved": []},
+    }
+    try:
+        result["github"] = get_github_activity(Config.GITHUB_USERNAME)
+    except (requests.RequestException, ValueError, KeyError):
+        result["github"]["error"] = "GitHub activity is temporarily unavailable."
+    try:
+        result["leetcode"] = get_leetcode_activity(Config.LEETCODE_USERNAME)
+    except (requests.RequestException, ValueError, KeyError):
+        result["leetcode"]["error"] = "LeetCode statistics are temporarily unavailable."
+    return jsonify(result)
 
 @app.route("/api/blogs/<slug>")
 def api_blog_detail(slug):

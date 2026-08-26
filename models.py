@@ -9,6 +9,12 @@ class Project(db.DynamicDocument):
     title = db.StringField(required=True)
     short_description = db.StringField(required=True)
     long_description = db.StringField()
+    problem = db.StringField()
+    solution = db.StringField()
+    role = db.StringField()
+    technologies = db.StringField()
+    outcomes = db.StringField()
+    screenshots = db.ListField(db.StringField())
     hero_image = db.StringField()
     repo_url = db.StringField()
     live_url = db.StringField()
@@ -59,6 +65,7 @@ class DiaryPage(db.DynamicDocument):
 
 class Certificate(db.DynamicDocument):
     name = db.StringField(required=True)
+    details = db.StringField()
     image_url = db.StringField()
     link_url = db.StringField()
     order = db.IntField(default=0)
@@ -68,6 +75,7 @@ class Certificate(db.DynamicDocument):
 
 class Skill(db.DynamicDocument):
     name = db.StringField(required=True)
+    details = db.StringField()
     category = db.StringField()  # e.g., "Frontend", "Backend"
     level = db.StringField()     # e.g., "Intermediate", "Advanced"
     order = db.IntField(default=0)
@@ -77,6 +85,7 @@ class Skill(db.DynamicDocument):
 
 class Interest(db.DynamicDocument):
     name = db.StringField(required=True)
+    details = db.StringField()
     order = db.IntField(default=0)
 
     def __repr__(self):
@@ -84,6 +93,7 @@ class Interest(db.DynamicDocument):
 
 class Tool(db.DynamicDocument):
     name = db.StringField(required=True)
+    details = db.StringField()
     icon_url = db.StringField()
     order = db.IntField(default=0)
 
@@ -92,6 +102,7 @@ class Tool(db.DynamicDocument):
 
 class Language(db.DynamicDocument):
     name = db.StringField(required=True)
+    details = db.StringField()
     level = db.StringField()
     order = db.IntField(default=0)
 
@@ -100,6 +111,7 @@ class Language(db.DynamicDocument):
 
 class Achievement(db.DynamicDocument):
     title = db.StringField(required=True)
+    details = db.StringField()
     description = db.StringField()
     date = db.DateField()
     order = db.IntField(default=0)
@@ -109,6 +121,7 @@ class Achievement(db.DynamicDocument):
 
 class Experience(db.DynamicDocument):
     company_name = db.StringField(required=True)
+    details = db.StringField()
     company_logo = db.StringField()
     role = db.StringField(required=True)
     tenure = db.StringField(required=True)
@@ -179,6 +192,27 @@ class HomeCard(db.DynamicDocument):
 
     def __repr__(self):
         return f"<HomeCard {self.title}>"
+
+class ProfileHighlight(db.DynamicDocument):
+    label = db.StringField(required=True)
+    value = db.StringField(required=True)
+    description = db.StringField()
+    order = db.IntField(default=0)
+
+    def __repr__(self):
+        return f"<ProfileHighlight {self.label}>"
+
+class Testimonial(db.DynamicDocument):
+    quote = db.StringField(required=True)
+    name = db.StringField(required=True)
+    role = db.StringField()
+    company = db.StringField()
+    avatar_url = db.StringField()
+    linkedin_url = db.StringField()
+    order = db.IntField(default=0)
+
+    def __repr__(self):
+        return f"<Testimonial {self.name}>"
 
 class User(db.Document, UserMixin):
     username = db.StringField(unique=True, required=True)

@@ -47,6 +47,10 @@ SECRET_KEY=your-generated-secret-key-here
 # Frontend URL
 FRONTEND_URL=http://localhost:5173
 
+# Public activity profiles shown on the About page
+GITHUB_USERNAME=your-github-username
+LEETCODE_USERNAME=your-leetcode-username
+
 # Environment (set to 'development' for debug mode during development)
 FLASK_ENV=development
 ```
